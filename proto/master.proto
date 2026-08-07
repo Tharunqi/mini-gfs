@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package gfs;
+
+option go_package = "github.com/Tharunqi/mini-gfs/internal/pb";
+import "common.proto";
+
+
+message CreateFileRequest {
+    string path = 1;
+}
+
+message CreateFileResponse {
+    Status status = 1;
+}
+
+message OpenFileRequest {
+    string path = 1;
+}
+
+message OpenFileResponse {
+    Status status = 1;
+    uint64 size_bytes = 2;
+    repeated ChunkHandle chunks = 3;
+}
+
+message DeleteFileRequest {
+    string path = 1;
+}
+
+message DeleteFileResponse {
+    Status status = 1;
+}
+
+message GetChunkLocationsRequest {
+    ChunkHandle chunk_handle = 1;
+}
+
+message GetChunkLocationsResponse {
+    Status status = 1;
+    ChunkLocation location = 2;
+}
+
+message AllocateChunkRequest {
+    string path = 1;
+}
+
+message AllocateChunkResponse {
+    Status status = 1;
+    ChunkLocation location = 2;
+}
+
+service MasterService {
+    rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
+
+    rpc OpenFile(OpenFileRequest) returns (OpenFileResponse);
+
+    rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+
+    rpc GetChunkLocations(GetChunkLocationsRequest) returns (GetChunkLocationsResponse);
+
+    rpc AllocateChunk(AllocateChunkRequest) returns (AllocateChunkResponse);
+}
