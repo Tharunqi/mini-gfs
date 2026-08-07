@@ -1,25 +1,76 @@
-message ChunkHandle{
-    uint64 id = 1;
+syntax = "proto3";
+
+package gfs;
+
+option go_package = "github.com/Tharunqi/mini-gfs/internal/pb";
+
+import "common.proto";
+
+message WriteChunkRequest {
+    ChunkHandle chunk_handle = 1;
+
+    // Byte offset within the chunk
+    uint64 offset = 2;
+
+    // Data to write
+    bytes data = 3;
 }
 
-message ServerInfo{
-    string id = 1;
-    string host = 2;
-    uint32 port = 3;
+message WriteChunkResponse {
+    Status status = 1;
 }
 
-message ChunkLocation{
-    ChunkHandle handle = 1;
-    ServerInfo primary = 2;
-    repeated ServerInfo replicas = 3;
+message ReadChunkRequest {
+    ChunkHandle chunk_handle = 1;
+
+    // Starting byte
+    uint64 offset = 2;
+
+    // Number of bytes to read
+    uint64 length = 3;
 }
 
-message LeaseInfo{
-    ServerInfo primary = 1;
-    int64 expiry_unix = 2;
+message ReadChunkResponse {
+    Status status = 1;
+
+    bytes data = 2;
 }
 
-message Status{
-    bool success = 1;
-    string message = 2;
+message DeleteChunkRequest {
+    ChunkHandle chunk_handle = 1;
+}
+
+message DeleteChunkResponse {
+    Status status = 1;
+}
+
+message HeartbeatRequest {
+
+    // Which chunk server is sending this heartbeat
+    ServerInfo server = 1;
+
+    // Chunks currently stored on this server
+    repeated ChunkHandle chunks = 2;
+
+    // Remaining free disk space (bytes)
+    uint64 available_space = 3;
+}
+
+message HeartbeatResponse {
+    Status status = 1;
+}
+
+service ChunkService {
+
+    rpc WriteChunk(WriteChunkRequest)
+        returns (WriteChunkResponse);
+
+    rpc ReadChunk(ReadChunkRequest)
+        returns (ReadChunkResponse);
+
+    rpc DeleteChunk(DeleteChunkRequest)
+        returns (DeleteChunkResponse);
+
+    rpc Heartbeat(HeartbeatRequest)
+        returns (HeartbeatResponse);
 }

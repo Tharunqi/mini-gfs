@@ -54,3 +54,21 @@ func (m *MetadataStore) DeleteFile(path string) error {
 	delete(m.files, path)
 	return nil
 }
+
+// return status,size,chunkhandles
+func (m *MetadataStore) OpenFile(path string) (*FileMetadata, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	_, exists := m.files[path]
+	if !exists {
+		return nil, ErrFileNotFound
+	}
+	filemetadata := &FileMetadata{
+		Path:         path,
+		SizeBytes:    0,
+		ChunkHandles: []uint64{},
+	}
+
+	return filemetadata, nil
+}

@@ -530,7 +530,7 @@ const file_master_proto_rawDesc = "" +
 	"\n" +
 	"DeleteFile\x12\x16.gfs.DeleteFileRequest\x1a\x17.gfs.DeleteFileResponse\x12R\n" +
 	"\x11GetChunkLocations\x12\x1d.gfs.GetChunkLocationsRequest\x1a\x1e.gfs.GetChunkLocationsResponse\x12F\n" +
-	"\rAllocateChunk\x12\x19.gfs.AllocateChunkRequest\x1a\x1a.gfs.AllocateChunkResponseB\rZ\vinternal/pbb\x06proto3"
+	"\rAllocateChunk\x12\x19.gfs.AllocateChunkRequest\x1a\x1a.gfs.AllocateChunkResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
 
 var (
 	file_master_proto_rawDescOnce sync.Once
