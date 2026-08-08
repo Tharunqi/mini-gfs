@@ -24,6 +24,7 @@ const (
 type ChunkHandle struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -63,6 +64,13 @@ func (x *ChunkHandle) GetId() uint64 {
 		return x.Id
 	}
 	return 0
+}
+
+func (x *ChunkHandle) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
 }
 
 type ServerInfo struct {
@@ -293,9 +301,10 @@ var File_common_proto protoreflect.FileDescriptor
 
 const file_common_proto_rawDesc = "" +
 	"\n" +
-	"\fcommon.proto\x12\x03gfs\"\x1d\n" +
+	"\fcommon.proto\x12\x03gfs\"1\n" +
 	"\vChunkHandle\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x04R\x02id\"D\n" +
+	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\"D\n" +
 	"\n" +
 	"ServerInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +

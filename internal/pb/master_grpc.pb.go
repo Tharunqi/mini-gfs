@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MasterService_CreateFile_FullMethodName        = "/gfs.MasterService/CreateFile"
-	MasterService_OpenFile_FullMethodName          = "/gfs.MasterService/OpenFile"
-	MasterService_DeleteFile_FullMethodName        = "/gfs.MasterService/DeleteFile"
-	MasterService_GetChunkLocations_FullMethodName = "/gfs.MasterService/GetChunkLocations"
-	MasterService_AllocateChunk_FullMethodName     = "/gfs.MasterService/AllocateChunk"
+	MasterService_CreateFile_FullMethodName          = "/gfs.MasterService/CreateFile"
+	MasterService_OpenFile_FullMethodName            = "/gfs.MasterService/OpenFile"
+	MasterService_DeleteFile_FullMethodName          = "/gfs.MasterService/DeleteFile"
+	MasterService_GetChunkLocations_FullMethodName   = "/gfs.MasterService/GetChunkLocations"
+	MasterService_AllocateChunk_FullMethodName       = "/gfs.MasterService/AllocateChunk"
+	MasterService_UpdateChunkMetadata_FullMethodName = "/gfs.MasterService/UpdateChunkMetadata"
 )
 
 // MasterServiceClient is the client API for MasterService service.
@@ -35,6 +36,7 @@ type MasterServiceClient interface {
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
 	GetChunkLocations(ctx context.Context, in *GetChunkLocationsRequest, opts ...grpc.CallOption) (*GetChunkLocationsResponse, error)
 	AllocateChunk(ctx context.Context, in *AllocateChunkRequest, opts ...grpc.CallOption) (*AllocateChunkResponse, error)
+	UpdateChunkMetadata(ctx context.Context, in *UpdateChunkMetadataRequest, opts ...grpc.CallOption) (*UpdateChunkMetadataResponse, error)
 }
 
 type masterServiceClient struct {
@@ -95,6 +97,16 @@ func (c *masterServiceClient) AllocateChunk(ctx context.Context, in *AllocateChu
 	return out, nil
 }
 
+func (c *masterServiceClient) UpdateChunkMetadata(ctx context.Context, in *UpdateChunkMetadataRequest, opts ...grpc.CallOption) (*UpdateChunkMetadataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateChunkMetadataResponse)
+	err := c.cc.Invoke(ctx, MasterService_UpdateChunkMetadata_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterServiceServer is the server API for MasterService service.
 // All implementations must embed UnimplementedMasterServiceServer
 // for forward compatibility.
@@ -104,6 +116,7 @@ type MasterServiceServer interface {
 	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
 	GetChunkLocations(context.Context, *GetChunkLocationsRequest) (*GetChunkLocationsResponse, error)
 	AllocateChunk(context.Context, *AllocateChunkRequest) (*AllocateChunkResponse, error)
+	UpdateChunkMetadata(context.Context, *UpdateChunkMetadataRequest) (*UpdateChunkMetadataResponse, error)
 	mustEmbedUnimplementedMasterServiceServer()
 }
 
@@ -128,6 +141,9 @@ func (UnimplementedMasterServiceServer) GetChunkLocations(context.Context, *GetC
 }
 func (UnimplementedMasterServiceServer) AllocateChunk(context.Context, *AllocateChunkRequest) (*AllocateChunkResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AllocateChunk not implemented")
+}
+func (UnimplementedMasterServiceServer) UpdateChunkMetadata(context.Context, *UpdateChunkMetadataRequest) (*UpdateChunkMetadataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateChunkMetadata not implemented")
 }
 func (UnimplementedMasterServiceServer) mustEmbedUnimplementedMasterServiceServer() {}
 func (UnimplementedMasterServiceServer) testEmbeddedByValue()                       {}
@@ -240,6 +256,24 @@ func _MasterService_AllocateChunk_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MasterService_UpdateChunkMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateChunkMetadataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).UpdateChunkMetadata(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterService_UpdateChunkMetadata_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).UpdateChunkMetadata(ctx, req.(*UpdateChunkMetadataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MasterService_ServiceDesc is the grpc.ServiceDesc for MasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -266,6 +300,10 @@ var MasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AllocateChunk",
 			Handler:    _MasterService_AllocateChunk_Handler,
+		},
+		{
+			MethodName: "UpdateChunkMetadata",
+			Handler:    _MasterService_UpdateChunkMetadata_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

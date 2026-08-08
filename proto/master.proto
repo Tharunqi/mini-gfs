@@ -50,6 +50,16 @@ message AllocateChunkResponse {
     ChunkLocation location = 2;
 }
 
+message UpdateChunkMetadataRequest {
+    ChunkHandle handle = 1;
+    uint64 bytes_written = 2;
+    uint64 offset = 3;
+}
+
+message UpdateChunkMetadataResponse {
+    Status status = 1;
+}
+
 service MasterService {
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
 
@@ -60,4 +70,6 @@ service MasterService {
     rpc GetChunkLocations(GetChunkLocationsRequest) returns (GetChunkLocationsResponse);
 
     rpc AllocateChunk(AllocateChunkRequest) returns (AllocateChunkResponse);
+
+    rpc UpdateChunkMetadata(UpdateChunkMetadataRequest) returns (UpdateChunkMetadataResponse);
 }

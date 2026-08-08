@@ -10,6 +10,11 @@ var (
 	ErrFileNotFound = errors.New("file not found")
 )
 
+type ChunkHandle struct {
+	Id   uint64
+	path string
+}
+
 type FileMetadata struct {
 	Path         string
 	SizeBytes    uint64
@@ -17,13 +22,15 @@ type FileMetadata struct {
 }
 
 type MetadataStore struct {
-	mu    sync.RWMutex
-	files map[string]*FileMetadata
+	mu      sync.RWMutex
+	files   map[string]*FileMetadata
+	chunkid uint64
 }
 
 func NewMetadataStore() *MetadataStore {
 	return &MetadataStore{
-		files: make(map[string]*FileMetadata),
+		files:   make(map[string]*FileMetadata),
+		chunkid: 1,
 	}
 }
 
@@ -66,9 +73,40 @@ func (m *MetadataStore) OpenFile(path string) (*FileMetadata, error) {
 	}
 	filemetadata := &FileMetadata{
 		Path:         path,
-		SizeBytes:    0,
-		ChunkHandles: []uint64{},
+		SizeBytes:    m.files[path].SizeBytes,
+		ChunkHandles: m.files[path].ChunkHandles,
+	}
+	return filemetadata, nil
+}
+
+func (m *MetadataStore) GetChunkLocations(chunkHandle uint64) ([]string, error) {
+	// For simplicity, we return a static list of chunk server addresses.
+	// In a real implementation, this would query the metadata store for the actual locations.
+	return []string{"localhost:50052"}, nil
+}
+
+func (m *MetadataStore) AllocateChunk(path string) (uint64, error) {
+	m.chunkid++
+	m.files[path].ChunkHandles = append(m.files[path].ChunkHandles, m.chunkid)
+
+	return m.chunkid, nil
+}
+
+func (m *MetadataStore) UpdateChunkMetadata(handle ChunkHandle, offset uint64, bytesWritten uint64) error {
+
+	end := offset + bytesWritten
+
+	// Find the file containing this chunk.
+	var file *FileMetadata
+	file = m.files[handle.path]
+
+	if file == nil {
+		return ErrFileNotFound
+	}
+	// Then:
+	if end > file.SizeBytes {
+		file.SizeBytes = end
 	}
 
-	return filemetadata, nil
+	return nil
 }

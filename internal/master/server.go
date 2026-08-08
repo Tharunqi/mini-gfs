@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"fmt"
+	"net"
+	"strconv"
+
 	pb "github.com/Tharunqi/mini-gfs/internal/pb"
 )
 
@@ -113,7 +117,8 @@ func (m *MasterServer) OpenFile(
 
 	for _, id := range filemetadata.ChunkHandles {
 		chunks = append(chunks, &pb.ChunkHandle{
-			Id: id,
+			Id:   id,
+			Path: req.Path,
 		})
 	}
 
@@ -140,24 +145,48 @@ func (m *MasterServer) GetChunkLocations(
 			},
 		}, nil
 	}
+	host, portStr, err := net.SplitHostPort(resp[0])
+	if err != nil {
+		return nil, err
+	}
+
+	port, err := strconv.ParseUint(portStr, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	primary := &pb.ServerInfo{
+		Id:   "chunkserver-1",
+		Host: host,
+		Port: uint32(port),
+	}
 	replicaLocations := make([]*pb.ServerInfo, 0, len(resp)-1)
 
 	for i := 1; i < len(resp); i++ {
+
+		host, portStr, err := net.SplitHostPort(resp[i])
+		if err != nil {
+			return nil, err
+		}
+
+		port, err := strconv.ParseUint(portStr, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
 		replicaLocations = append(
 			replicaLocations,
 			&pb.ServerInfo{
-				Id: resp[i],
+				Id:   fmt.Sprintf("chunkserver-%d", i+1),
+				Host: host,
+				Port: uint32(port),
 			},
 		)
 	}
 
-	primary := &pb.ServerInfo{
-		Id: resp[0],
-	}
-
 	location := &pb.ChunkLocation{
 		Handle: &pb.ChunkHandle{
-			Id: req.ChunkHandle.Id,
+			Id:   req.ChunkHandle.Id,
+			Path: req.ChunkHandle.Path,
 		},
 		Primary:  primary,
 		Replicas: replicaLocations,
@@ -176,7 +205,7 @@ func (m *MasterServer) AllocateChunk(
 	ctx context.Context,
 	req *pb.AllocateChunkRequest,
 ) (*pb.AllocateChunkResponse, error) {
-	chunkHandle, err := m.metadata.AllocateChunk()
+	chunkHandle, err := m.metadata.AllocateChunk(req.Path)
 	if err != nil {
 		return &pb.AllocateChunkResponse{
 			Status: &pb.Status{
@@ -193,8 +222,46 @@ func (m *MasterServer) AllocateChunk(
 		},
 		Location: &pb.ChunkLocation{
 			Handle: &pb.ChunkHandle{
-				Id: chunkHandle,
+				Id:   chunkHandle,
+				Path: req.Path,
 			},
+			Primary: &pb.ServerInfo{
+				Id:   "chunkserver1:50052",
+				Host: "localhost",
+				Port: 50052,
+			},
+		},
+	}, nil
+}
+
+func (m *MasterServer) UpdateChunkMetadata(
+	ctx context.Context,
+	req *pb.UpdateChunkMetadataRequest,
+) (*pb.UpdateChunkMetadataResponse, error) {
+	handle := ChunkHandle{
+		Id:   req.Handle.Id,
+		path: req.Handle.Path,
+	}
+
+	err := m.metadata.UpdateChunkMetadata(
+		handle,
+		req.Offset,
+		req.BytesWritten,
+	)
+
+	if err != nil {
+		return &pb.UpdateChunkMetadataResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	return &pb.UpdateChunkMetadataResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "metadata updated successfully",
 		},
 	}, nil
 }
