@@ -436,6 +436,110 @@ func (x *HeartbeatResponse) GetStatus() *Status {
 	return nil
 }
 
+type TruncateChunkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChunkHandle   *ChunkHandle           `protobuf:"bytes,1,opt,name=chunk_handle,json=chunkHandle,proto3" json:"chunk_handle,omitempty"`
+	Offset        uint64                 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	Length        uint64                 `protobuf:"varint,3,opt,name=length,proto3" json:"length,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TruncateChunkRequest) Reset() {
+	*x = TruncateChunkRequest{}
+	mi := &file_chunk_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TruncateChunkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TruncateChunkRequest) ProtoMessage() {}
+
+func (x *TruncateChunkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TruncateChunkRequest.ProtoReflect.Descriptor instead.
+func (*TruncateChunkRequest) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *TruncateChunkRequest) GetChunkHandle() *ChunkHandle {
+	if x != nil {
+		return x.ChunkHandle
+	}
+	return nil
+}
+
+func (x *TruncateChunkRequest) GetOffset() uint64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *TruncateChunkRequest) GetLength() uint64 {
+	if x != nil {
+		return x.Length
+	}
+	return 0
+}
+
+type TruncateChunkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TruncateChunkResponse) Reset() {
+	*x = TruncateChunkResponse{}
+	mi := &file_chunk_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TruncateChunkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TruncateChunkResponse) ProtoMessage() {}
+
+func (x *TruncateChunkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TruncateChunkResponse.ProtoReflect.Descriptor instead.
+func (*TruncateChunkResponse) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *TruncateChunkResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 var File_chunk_proto protoreflect.FileDescriptor
 
 const file_chunk_proto_rawDesc = "" +
@@ -463,13 +567,20 @@ const file_chunk_proto_rawDesc = "" +
 	"\x06chunks\x18\x02 \x03(\v2\x10.gfs.ChunkHandleR\x06chunks\x12'\n" +
 	"\x0favailable_space\x18\x03 \x01(\x04R\x0eavailableSpace\"8\n" +
 	"\x11HeartbeatResponse\x12#\n" +
-	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status2\x87\x02\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"{\n" +
+	"\x14TruncateChunkRequest\x123\n" +
+	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x04R\x06offset\x12\x16\n" +
+	"\x06length\x18\x03 \x01(\x04R\x06length\"<\n" +
+	"\x15TruncateChunkResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status2\xcf\x02\n" +
 	"\fChunkService\x12=\n" +
 	"\n" +
 	"WriteChunk\x12\x16.gfs.WriteChunkRequest\x1a\x17.gfs.WriteChunkResponse\x12:\n" +
 	"\tReadChunk\x12\x15.gfs.ReadChunkRequest\x1a\x16.gfs.ReadChunkResponse\x12@\n" +
 	"\vDeleteChunk\x12\x17.gfs.DeleteChunkRequest\x1a\x18.gfs.DeleteChunkResponse\x12:\n" +
-	"\tHeartbeat\x12\x15.gfs.HeartbeatRequest\x1a\x16.gfs.HeartbeatResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
+	"\tHeartbeat\x12\x15.gfs.HeartbeatRequest\x1a\x16.gfs.HeartbeatResponse\x12F\n" +
+	"\rTruncateChunk\x12\x19.gfs.TruncateChunkRequest\x1a\x1a.gfs.TruncateChunkResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
 
 var (
 	file_chunk_proto_rawDescOnce sync.Once
@@ -483,43 +594,49 @@ func file_chunk_proto_rawDescGZIP() []byte {
 	return file_chunk_proto_rawDescData
 }
 
-var file_chunk_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_chunk_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_chunk_proto_goTypes = []any{
-	(*WriteChunkRequest)(nil),   // 0: gfs.WriteChunkRequest
-	(*WriteChunkResponse)(nil),  // 1: gfs.WriteChunkResponse
-	(*ReadChunkRequest)(nil),    // 2: gfs.ReadChunkRequest
-	(*ReadChunkResponse)(nil),   // 3: gfs.ReadChunkResponse
-	(*DeleteChunkRequest)(nil),  // 4: gfs.DeleteChunkRequest
-	(*DeleteChunkResponse)(nil), // 5: gfs.DeleteChunkResponse
-	(*HeartbeatRequest)(nil),    // 6: gfs.HeartbeatRequest
-	(*HeartbeatResponse)(nil),   // 7: gfs.HeartbeatResponse
-	(*ChunkHandle)(nil),         // 8: gfs.ChunkHandle
-	(*Status)(nil),              // 9: gfs.Status
-	(*ServerInfo)(nil),          // 10: gfs.ServerInfo
+	(*WriteChunkRequest)(nil),     // 0: gfs.WriteChunkRequest
+	(*WriteChunkResponse)(nil),    // 1: gfs.WriteChunkResponse
+	(*ReadChunkRequest)(nil),      // 2: gfs.ReadChunkRequest
+	(*ReadChunkResponse)(nil),     // 3: gfs.ReadChunkResponse
+	(*DeleteChunkRequest)(nil),    // 4: gfs.DeleteChunkRequest
+	(*DeleteChunkResponse)(nil),   // 5: gfs.DeleteChunkResponse
+	(*HeartbeatRequest)(nil),      // 6: gfs.HeartbeatRequest
+	(*HeartbeatResponse)(nil),     // 7: gfs.HeartbeatResponse
+	(*TruncateChunkRequest)(nil),  // 8: gfs.TruncateChunkRequest
+	(*TruncateChunkResponse)(nil), // 9: gfs.TruncateChunkResponse
+	(*ChunkHandle)(nil),           // 10: gfs.ChunkHandle
+	(*Status)(nil),                // 11: gfs.Status
+	(*ServerInfo)(nil),            // 12: gfs.ServerInfo
 }
 var file_chunk_proto_depIdxs = []int32{
-	8,  // 0: gfs.WriteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	9,  // 1: gfs.WriteChunkResponse.status:type_name -> gfs.Status
-	8,  // 2: gfs.ReadChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	9,  // 3: gfs.ReadChunkResponse.status:type_name -> gfs.Status
-	8,  // 4: gfs.DeleteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	9,  // 5: gfs.DeleteChunkResponse.status:type_name -> gfs.Status
-	10, // 6: gfs.HeartbeatRequest.server:type_name -> gfs.ServerInfo
-	8,  // 7: gfs.HeartbeatRequest.chunks:type_name -> gfs.ChunkHandle
-	9,  // 8: gfs.HeartbeatResponse.status:type_name -> gfs.Status
-	0,  // 9: gfs.ChunkService.WriteChunk:input_type -> gfs.WriteChunkRequest
-	2,  // 10: gfs.ChunkService.ReadChunk:input_type -> gfs.ReadChunkRequest
-	4,  // 11: gfs.ChunkService.DeleteChunk:input_type -> gfs.DeleteChunkRequest
-	6,  // 12: gfs.ChunkService.Heartbeat:input_type -> gfs.HeartbeatRequest
-	1,  // 13: gfs.ChunkService.WriteChunk:output_type -> gfs.WriteChunkResponse
-	3,  // 14: gfs.ChunkService.ReadChunk:output_type -> gfs.ReadChunkResponse
-	5,  // 15: gfs.ChunkService.DeleteChunk:output_type -> gfs.DeleteChunkResponse
-	7,  // 16: gfs.ChunkService.Heartbeat:output_type -> gfs.HeartbeatResponse
-	13, // [13:17] is the sub-list for method output_type
-	9,  // [9:13] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	10, // 0: gfs.WriteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	11, // 1: gfs.WriteChunkResponse.status:type_name -> gfs.Status
+	10, // 2: gfs.ReadChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	11, // 3: gfs.ReadChunkResponse.status:type_name -> gfs.Status
+	10, // 4: gfs.DeleteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	11, // 5: gfs.DeleteChunkResponse.status:type_name -> gfs.Status
+	12, // 6: gfs.HeartbeatRequest.server:type_name -> gfs.ServerInfo
+	10, // 7: gfs.HeartbeatRequest.chunks:type_name -> gfs.ChunkHandle
+	11, // 8: gfs.HeartbeatResponse.status:type_name -> gfs.Status
+	10, // 9: gfs.TruncateChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	11, // 10: gfs.TruncateChunkResponse.status:type_name -> gfs.Status
+	0,  // 11: gfs.ChunkService.WriteChunk:input_type -> gfs.WriteChunkRequest
+	2,  // 12: gfs.ChunkService.ReadChunk:input_type -> gfs.ReadChunkRequest
+	4,  // 13: gfs.ChunkService.DeleteChunk:input_type -> gfs.DeleteChunkRequest
+	6,  // 14: gfs.ChunkService.Heartbeat:input_type -> gfs.HeartbeatRequest
+	8,  // 15: gfs.ChunkService.TruncateChunk:input_type -> gfs.TruncateChunkRequest
+	1,  // 16: gfs.ChunkService.WriteChunk:output_type -> gfs.WriteChunkResponse
+	3,  // 17: gfs.ChunkService.ReadChunk:output_type -> gfs.ReadChunkResponse
+	5,  // 18: gfs.ChunkService.DeleteChunk:output_type -> gfs.DeleteChunkResponse
+	7,  // 19: gfs.ChunkService.Heartbeat:output_type -> gfs.HeartbeatResponse
+	9,  // 20: gfs.ChunkService.TruncateChunk:output_type -> gfs.TruncateChunkResponse
+	16, // [16:21] is the sub-list for method output_type
+	11, // [11:16] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_chunk_proto_init() }
@@ -534,7 +651,7 @@ func file_chunk_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chunk_proto_rawDesc), len(file_chunk_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

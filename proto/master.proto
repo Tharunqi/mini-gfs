@@ -60,6 +60,28 @@ message UpdateChunkMetadataResponse {
     Status status = 1;
 }
 
+message WriteFileRequest{
+    string path = 1;
+    uint64 offset = 2;
+    uint64 length = 3;
+}
+
+message WriteFileResponse{
+    Status status = 1;
+    repeated ChunkLocation locations = 2;
+}
+
+message AppendFileRequest{
+    string path = 1;
+    uint64 length = 2;
+}
+
+message AppendFileResponse{
+    Status status = 1;
+    uint64 offset = 2;
+    repeated ChunkLocation locations = 3;
+}
+
 service MasterService {
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
 
@@ -72,4 +94,9 @@ service MasterService {
     rpc AllocateChunk(AllocateChunkRequest) returns (AllocateChunkResponse);
 
     rpc UpdateChunkMetadata(UpdateChunkMetadataRequest) returns (UpdateChunkMetadataResponse);
+
+    rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+
+    rpc AppendFile(AppendFileRequest) returns (AppendFileResponse);
+
 }

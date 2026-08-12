@@ -60,6 +60,16 @@ message HeartbeatResponse {
     Status status = 1;
 }
 
+message TruncateChunkRequest{
+    ChunkHandle chunk_handle = 1;
+    uint64 offset = 2;
+    uint64 length = 3;
+}
+
+message TruncateChunkResponse{
+    Status status = 1;
+}
+
 service ChunkService {
 
     rpc WriteChunk(WriteChunkRequest)
@@ -73,4 +83,6 @@ service ChunkService {
 
     rpc Heartbeat(HeartbeatRequest)
         returns (HeartbeatResponse);
+
+    rpc TruncateChunk(TruncateChunkRequest) returns (TruncateChunkResponse);
 }

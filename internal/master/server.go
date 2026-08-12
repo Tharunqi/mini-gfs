@@ -265,3 +265,158 @@ func (m *MasterServer) UpdateChunkMetadata(
 		},
 	}, nil
 }
+
+func (m *MasterServer) WriteFile(
+	ctx context.Context,
+	req *pb.WriteFileRequest,
+) (*pb.WriteFileResponse, error) {
+
+	chunkIDs, err := m.metadata.WriteFile(
+		req.Path,
+		req.Offset,
+		req.Length,
+	)
+
+	if err != nil {
+		if errors.Is(err, ErrFileNotFound) {
+			return &pb.WriteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "file not found",
+				},
+			}, nil
+		}
+
+		return &pb.WriteFileResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	locations := make(
+		[]*pb.ChunkLocation,
+		0,
+		len(chunkIDs),
+	)
+
+	for _, chunkID := range chunkIDs {
+
+		locationResp, err := m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   chunkID,
+					Path: req.Path,
+				},
+			},
+		)
+
+		if err != nil {
+			return &pb.WriteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
+
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+
+			return &pb.WriteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "failed to get chunk location",
+				},
+			}, nil
+		}
+
+		locations = append(
+			locations,
+			locationResp.Location,
+		)
+	}
+
+	return &pb.WriteFileResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "write locations allocated successfully",
+		},
+		Locations: locations,
+	}, nil
+}
+
+func (m *MasterServer) AppendFile(
+	ctx context.Context,
+	req *pb.AppendFileRequest,
+) (*pb.AppendFileResponse, error) {
+
+	appendOffset, chunkIDs, err := m.metadata.AppendFile(
+		req.Path,
+		req.Length,
+	)
+
+	if err != nil {
+		return &pb.AppendFileResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	locations := make(
+		[]*pb.ChunkLocation,
+		0,
+		len(chunkIDs),
+	)
+
+	for _, chunkID := range chunkIDs {
+
+		locationResp, err := m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   chunkID,
+					Path: req.Path,
+				},
+			},
+		)
+
+		if err != nil {
+			return &pb.AppendFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
+
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+
+			return &pb.AppendFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "failed to get chunk location",
+				},
+			}, nil
+		}
+
+		locations = append(
+			locations,
+			locationResp.Location,
+		)
+	}
+
+	return &pb.AppendFileResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "append locations allocated successfully",
+		},
+		Offset:    appendOffset,
+		Locations: locations,
+	}, nil
+}

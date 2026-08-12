@@ -2,7 +2,10 @@ package chunkserver
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -17,8 +20,9 @@ type Chunk struct {
 }
 
 type Storage struct {
-	mu     sync.RWMutex
-	chunks map[uint64]*Chunk
+	mu      sync.RWMutex
+	baseDir string
+	chunks  map[uint64]uint64
 }
 
 type ChunkHandle struct {
@@ -27,16 +31,25 @@ type ChunkHandle struct {
 }
 
 func NewStorage() *Storage {
+	os.MkdirAll("chunks", 0755)
 	return &Storage{
-		chunks: make(map[uint64]*Chunk),
+		chunks:  make(map[uint64]uint64),
+		baseDir: "chunks",
 	}
 }
 
-func (s *Storage) WriteChunk(handle ChunkHandle, offset uint64, data []byte) error {
+func (s *Storage) WriteChunk(
+	handle ChunkHandle,
+	offset uint64,
+	data []byte,
+) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	path := handle.path
+	path := filepath.Join(
+		s.baseDir,
+		fmt.Sprintf("%d.chunk", handle.Id),
+	)
 
 	file, err := os.OpenFile(
 		path,
@@ -48,8 +61,7 @@ func (s *Storage) WriteChunk(handle ChunkHandle, offset uint64, data []byte) err
 	}
 	defer file.Close()
 
-	_, err = file.Seek(int64(offset), 0)
-
+	_, err = file.Seek(int64(offset), io.SeekStart)
 	if err != nil {
 		return err
 	}
@@ -59,10 +71,7 @@ func (s *Storage) WriteChunk(handle ChunkHandle, offset uint64, data []byte) err
 		return err
 	}
 
-	s.chunks[handle.Id] = &Chunk{
-		Handle: handle.Id,
-		Data:   data,
-	}
+	s.chunks[handle.Id] = offset + uint64(len(data))
 
 	return nil
 }
@@ -93,15 +102,15 @@ func (s *Storage) ReadChunk(handle ChunkHandle, offset uint64, length uint64) ([
 	return data, nil
 }
 
-func (s *Storage) DeleteChunk(handle uint64) error {
+func (s *Storage) DeleteChunk(handle ChunkHandle) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.chunks[handle]; !exists {
+	if _, exists := s.chunks[handle.Id]; !exists {
 		return ErrChunkNotFound
 	}
 
-	delete(s.chunks, handle)
+	delete(s.chunks, handle.Id)
 	return nil
 }
 

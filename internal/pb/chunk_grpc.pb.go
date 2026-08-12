@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChunkService_WriteChunk_FullMethodName  = "/gfs.ChunkService/WriteChunk"
-	ChunkService_ReadChunk_FullMethodName   = "/gfs.ChunkService/ReadChunk"
-	ChunkService_DeleteChunk_FullMethodName = "/gfs.ChunkService/DeleteChunk"
-	ChunkService_Heartbeat_FullMethodName   = "/gfs.ChunkService/Heartbeat"
+	ChunkService_WriteChunk_FullMethodName    = "/gfs.ChunkService/WriteChunk"
+	ChunkService_ReadChunk_FullMethodName     = "/gfs.ChunkService/ReadChunk"
+	ChunkService_DeleteChunk_FullMethodName   = "/gfs.ChunkService/DeleteChunk"
+	ChunkService_Heartbeat_FullMethodName     = "/gfs.ChunkService/Heartbeat"
+	ChunkService_TruncateChunk_FullMethodName = "/gfs.ChunkService/TruncateChunk"
 )
 
 // ChunkServiceClient is the client API for ChunkService service.
@@ -33,6 +34,7 @@ type ChunkServiceClient interface {
 	ReadChunk(ctx context.Context, in *ReadChunkRequest, opts ...grpc.CallOption) (*ReadChunkResponse, error)
 	DeleteChunk(ctx context.Context, in *DeleteChunkRequest, opts ...grpc.CallOption) (*DeleteChunkResponse, error)
 	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
+	TruncateChunk(ctx context.Context, in *TruncateChunkRequest, opts ...grpc.CallOption) (*TruncateChunkResponse, error)
 }
 
 type chunkServiceClient struct {
@@ -83,6 +85,16 @@ func (c *chunkServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequest
 	return out, nil
 }
 
+func (c *chunkServiceClient) TruncateChunk(ctx context.Context, in *TruncateChunkRequest, opts ...grpc.CallOption) (*TruncateChunkResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TruncateChunkResponse)
+	err := c.cc.Invoke(ctx, ChunkService_TruncateChunk_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChunkServiceServer is the server API for ChunkService service.
 // All implementations must embed UnimplementedChunkServiceServer
 // for forward compatibility.
@@ -91,6 +103,7 @@ type ChunkServiceServer interface {
 	ReadChunk(context.Context, *ReadChunkRequest) (*ReadChunkResponse, error)
 	DeleteChunk(context.Context, *DeleteChunkRequest) (*DeleteChunkResponse, error)
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	TruncateChunk(context.Context, *TruncateChunkRequest) (*TruncateChunkResponse, error)
 	mustEmbedUnimplementedChunkServiceServer()
 }
 
@@ -112,6 +125,9 @@ func (UnimplementedChunkServiceServer) DeleteChunk(context.Context, *DeleteChunk
 }
 func (UnimplementedChunkServiceServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Heartbeat not implemented")
+}
+func (UnimplementedChunkServiceServer) TruncateChunk(context.Context, *TruncateChunkRequest) (*TruncateChunkResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TruncateChunk not implemented")
 }
 func (UnimplementedChunkServiceServer) mustEmbedUnimplementedChunkServiceServer() {}
 func (UnimplementedChunkServiceServer) testEmbeddedByValue()                      {}
@@ -206,6 +222,24 @@ func _ChunkService_Heartbeat_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChunkService_TruncateChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TruncateChunkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChunkServiceServer).TruncateChunk(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChunkService_TruncateChunk_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChunkServiceServer).TruncateChunk(ctx, req.(*TruncateChunkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChunkService_ServiceDesc is the grpc.ServiceDesc for ChunkService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +262,10 @@ var ChunkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Heartbeat",
 			Handler:    _ChunkService_Heartbeat_Handler,
+		},
+		{
+			MethodName: "TruncateChunk",
+			Handler:    _ChunkService_TruncateChunk_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

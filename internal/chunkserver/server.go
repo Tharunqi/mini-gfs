@@ -110,7 +110,11 @@ func (c *ChunkServer) DeleteChunk(
 	ctx context.Context,
 	req *pb.DeleteChunkRequest,
 ) (*pb.DeleteChunkResponse, error) {
-	err := c.storage.DeleteChunk(req.ChunkHandle.Id)
+	handle := ChunkHandle{
+		Id:   req.ChunkHandle.Id,
+		path: req.ChunkHandle.Path,
+	}
+	err := c.storage.DeleteChunk(handle)
 	if err != nil {
 		if errors.Is(err, ErrChunkNotFound) {
 			return &pb.DeleteChunkResponse{
@@ -124,6 +128,23 @@ func (c *ChunkServer) DeleteChunk(
 			Status: &pb.Status{
 				Success: false,
 				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	_, err = c.masterClient.UpdateChunkMetadata(
+		ctx,
+		&pb.UpdateChunkMetadataRequest{
+			Handle:       req.ChunkHandle,
+			Offset:       0,
+			BytesWritten: 0,
+		},
+	)
+	if err != nil {
+		return &pb.DeleteChunkResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: "failed to update chunk metadata",
 			},
 		}, nil
 	}

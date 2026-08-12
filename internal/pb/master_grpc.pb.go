@@ -25,6 +25,8 @@ const (
 	MasterService_GetChunkLocations_FullMethodName   = "/gfs.MasterService/GetChunkLocations"
 	MasterService_AllocateChunk_FullMethodName       = "/gfs.MasterService/AllocateChunk"
 	MasterService_UpdateChunkMetadata_FullMethodName = "/gfs.MasterService/UpdateChunkMetadata"
+	MasterService_WriteFile_FullMethodName           = "/gfs.MasterService/WriteFile"
+	MasterService_AppendFile_FullMethodName          = "/gfs.MasterService/AppendFile"
 )
 
 // MasterServiceClient is the client API for MasterService service.
@@ -37,6 +39,8 @@ type MasterServiceClient interface {
 	GetChunkLocations(ctx context.Context, in *GetChunkLocationsRequest, opts ...grpc.CallOption) (*GetChunkLocationsResponse, error)
 	AllocateChunk(ctx context.Context, in *AllocateChunkRequest, opts ...grpc.CallOption) (*AllocateChunkResponse, error)
 	UpdateChunkMetadata(ctx context.Context, in *UpdateChunkMetadataRequest, opts ...grpc.CallOption) (*UpdateChunkMetadataResponse, error)
+	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error)
+	AppendFile(ctx context.Context, in *AppendFileRequest, opts ...grpc.CallOption) (*AppendFileResponse, error)
 }
 
 type masterServiceClient struct {
@@ -107,6 +111,26 @@ func (c *masterServiceClient) UpdateChunkMetadata(ctx context.Context, in *Updat
 	return out, nil
 }
 
+func (c *masterServiceClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WriteFileResponse)
+	err := c.cc.Invoke(ctx, MasterService_WriteFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *masterServiceClient) AppendFile(ctx context.Context, in *AppendFileRequest, opts ...grpc.CallOption) (*AppendFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AppendFileResponse)
+	err := c.cc.Invoke(ctx, MasterService_AppendFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterServiceServer is the server API for MasterService service.
 // All implementations must embed UnimplementedMasterServiceServer
 // for forward compatibility.
@@ -117,6 +141,8 @@ type MasterServiceServer interface {
 	GetChunkLocations(context.Context, *GetChunkLocationsRequest) (*GetChunkLocationsResponse, error)
 	AllocateChunk(context.Context, *AllocateChunkRequest) (*AllocateChunkResponse, error)
 	UpdateChunkMetadata(context.Context, *UpdateChunkMetadataRequest) (*UpdateChunkMetadataResponse, error)
+	WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error)
+	AppendFile(context.Context, *AppendFileRequest) (*AppendFileResponse, error)
 	mustEmbedUnimplementedMasterServiceServer()
 }
 
@@ -144,6 +170,12 @@ func (UnimplementedMasterServiceServer) AllocateChunk(context.Context, *Allocate
 }
 func (UnimplementedMasterServiceServer) UpdateChunkMetadata(context.Context, *UpdateChunkMetadataRequest) (*UpdateChunkMetadataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateChunkMetadata not implemented")
+}
+func (UnimplementedMasterServiceServer) WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method WriteFile not implemented")
+}
+func (UnimplementedMasterServiceServer) AppendFile(context.Context, *AppendFileRequest) (*AppendFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AppendFile not implemented")
 }
 func (UnimplementedMasterServiceServer) mustEmbedUnimplementedMasterServiceServer() {}
 func (UnimplementedMasterServiceServer) testEmbeddedByValue()                       {}
@@ -274,6 +306,42 @@ func _MasterService_UpdateChunkMetadata_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MasterService_WriteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WriteFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).WriteFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterService_WriteFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).WriteFile(ctx, req.(*WriteFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MasterService_AppendFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).AppendFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterService_AppendFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).AppendFile(ctx, req.(*AppendFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MasterService_ServiceDesc is the grpc.ServiceDesc for MasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +372,14 @@ var MasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateChunkMetadata",
 			Handler:    _MasterService_UpdateChunkMetadata_Handler,
+		},
+		{
+			MethodName: "WriteFile",
+			Handler:    _MasterService_WriteFile_Handler,
+		},
+		{
+			MethodName: "AppendFile",
+			Handler:    _MasterService_AppendFile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

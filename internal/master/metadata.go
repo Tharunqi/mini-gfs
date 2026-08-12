@@ -3,6 +3,8 @@ package master
 import (
 	"errors"
 	"sync"
+
+	"github.com/Tharunqi/mini-gfs/internal/config"
 )
 
 var (
@@ -109,4 +111,108 @@ func (m *MetadataStore) UpdateChunkMetadata(handle ChunkHandle, offset uint64, b
 	}
 
 	return nil
+}
+
+func (m *MetadataStore) WriteFile(path string, offset uint64, length uint64) ([]uint64, error) {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	file, exists := m.files[path]
+	if !exists {
+		return nil, ErrFileNotFound
+	}
+
+	// Nothing to write.
+	if length == 0 {
+		return []uint64{}, nil
+	}
+
+	// Determine first and last affected chunk.
+	startChunk := offset / config.ChunkSize
+	endOffset := offset + length
+	endChunk := (endOffset - 1) / config.ChunkSize
+
+	// Allocate enough chunks.
+	for uint64(len(file.ChunkHandles)) <= endChunk {
+		// Don't call AllocateChunk() here because it also
+		// acquires the mutex and modifies ChunkHandles.
+
+		m.chunkid++
+
+		file.ChunkHandles = append(
+			file.ChunkHandles,
+			m.chunkid,
+		)
+	}
+
+	// Update file size if necessary.
+	if endOffset > file.SizeBytes {
+		file.SizeBytes = endOffset
+	}
+
+	// Return all chunks affected by this write.
+	chunkHandles := make(
+		[]uint64,
+		endChunk-startChunk+1,
+	)
+
+	copy(
+		chunkHandles,
+		file.ChunkHandles[startChunk:endChunk+1],
+	)
+
+	return chunkHandles, nil
+}
+
+func (m *MetadataStore) AppendFile(
+	path string,
+	length uint64,
+) (uint64, []uint64, error) {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	file, exists := m.files[path]
+	if !exists {
+		return 0, nil, ErrFileNotFound
+	}
+
+	if length == 0 {
+		return file.SizeBytes, []uint64{}, nil
+	}
+
+	// Append starts at the current end of the file.
+	appendOffset := file.SizeBytes
+
+	startChunk := appendOffset / config.ChunkSize
+
+	endOffset := appendOffset + length
+	endChunk := (endOffset - 1) / config.ChunkSize
+
+	// Allocate all chunks required by the append.
+	for uint64(len(file.ChunkHandles)) <= endChunk {
+		m.chunkid++
+
+		file.ChunkHandles = append(
+			file.ChunkHandles,
+			m.chunkid,
+		)
+	}
+
+	// For the prototype we can update the logical size here.
+	file.SizeBytes = endOffset
+
+	// Return the affected chunks.
+	chunkHandles := make(
+		[]uint64,
+		endChunk-startChunk+1,
+	)
+
+	copy(
+		chunkHandles,
+		file.ChunkHandles[startChunk:endChunk+1],
+	)
+
+	return appendOffset, chunkHandles, nil
 }
