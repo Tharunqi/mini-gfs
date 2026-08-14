@@ -216,3 +216,88 @@ func (m *MetadataStore) AppendFile(
 
 	return appendOffset, chunkHandles, nil
 }
+
+func (m *MetadataStore) RangeDeleteFile(path string, offset uint64, length uint64) ([]uint64, []uint64, []uint64, uint64, uint64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	file, exists := m.files[path]
+	if !exists {
+		return nil, nil, nil, 0, 0, ErrFileNotFound
+	}
+
+	if length == 0 {
+		return []uint64{}, []uint64{}, []uint64{}, 0, 0, nil
+	}
+
+	if offset > file.SizeBytes {
+		return nil, nil, nil, 0, 0,
+			errors.New("offset exceeds file size")
+	}
+
+	// If the requested deletion extends beyond EOF,
+	// simply delete up to EOF.
+	if length > file.SizeBytes-offset {
+		length = file.SizeBytes - offset
+	}
+
+	startChunk := offset / config.ChunkSize
+	startOffset_startChunk := offset % config.ChunkSize
+	endOffset := offset + length
+	endChunk := (endOffset - 1) / config.ChunkSize
+	endOffset_endChunk := (endOffset - 1) % config.ChunkSize
+
+	before_range := make(
+		[]uint64,
+		startChunk,
+	)
+	in_range := make(
+		[]uint64,
+		endChunk-startChunk+1,
+	)
+	after_range := make(
+		[]uint64,
+		len(file.ChunkHandles)-int(endChunk)-1,
+	)
+
+	copy(
+		before_range,
+		file.ChunkHandles[:startChunk],
+	)
+	copy(
+		in_range,
+		file.ChunkHandles[startChunk:endChunk+1],
+	)
+
+	copy(
+		after_range,
+		file.ChunkHandles[endChunk+1:],
+	)
+
+	return before_range, in_range, after_range, startOffset_startChunk, endOffset_endChunk, nil
+}
+
+func (m *MetadataStore) UpdateMasterMetadata(
+	path string,
+	newSize uint64,
+	chunkIDs []uint64,
+) error {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	file, exists := m.files[path]
+	if !exists {
+		return ErrFileNotFound
+	}
+
+	// Replace the old chunk list completely.
+	file.ChunkHandles = append(
+		[]uint64(nil),
+		chunkIDs...,
+	)
+
+	file.SizeBytes = newSize
+
+	return nil
+}

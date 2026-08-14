@@ -821,6 +821,254 @@ func (x *AppendFileResponse) GetLocations() []*ChunkLocation {
 	return nil
 }
 
+type RangeDeleteFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Offset        uint64                 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	Length        uint64                 `protobuf:"varint,3,opt,name=length,proto3" json:"length,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RangeDeleteFileRequest) Reset() {
+	*x = RangeDeleteFileRequest{}
+	mi := &file_master_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RangeDeleteFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RangeDeleteFileRequest) ProtoMessage() {}
+
+func (x *RangeDeleteFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RangeDeleteFileRequest.ProtoReflect.Descriptor instead.
+func (*RangeDeleteFileRequest) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RangeDeleteFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *RangeDeleteFileRequest) GetOffset() uint64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *RangeDeleteFileRequest) GetLength() uint64 {
+	if x != nil {
+		return x.Length
+	}
+	return 0
+}
+
+type RangeDeleteFileResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Status           *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	BeforeRange      []*ChunkLocation       `protobuf:"bytes,2,rep,name=before_range,json=beforeRange,proto3" json:"before_range,omitempty"`
+	Range            []*ChunkLocation       `protobuf:"bytes,3,rep,name=range,proto3" json:"range,omitempty"`
+	AfterRange       []*ChunkLocation       `protobuf:"bytes,4,rep,name=after_range,json=afterRange,proto3" json:"after_range,omitempty"`
+	StartOffsetRange uint64                 `protobuf:"varint,5,opt,name=start_offset_range,json=startOffsetRange,proto3" json:"start_offset_range,omitempty"`
+	EndOffsetRange   uint64                 `protobuf:"varint,6,opt,name=end_offset_range,json=endOffsetRange,proto3" json:"end_offset_range,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RangeDeleteFileResponse) Reset() {
+	*x = RangeDeleteFileResponse{}
+	mi := &file_master_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RangeDeleteFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RangeDeleteFileResponse) ProtoMessage() {}
+
+func (x *RangeDeleteFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RangeDeleteFileResponse.ProtoReflect.Descriptor instead.
+func (*RangeDeleteFileResponse) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *RangeDeleteFileResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+func (x *RangeDeleteFileResponse) GetBeforeRange() []*ChunkLocation {
+	if x != nil {
+		return x.BeforeRange
+	}
+	return nil
+}
+
+func (x *RangeDeleteFileResponse) GetRange() []*ChunkLocation {
+	if x != nil {
+		return x.Range
+	}
+	return nil
+}
+
+func (x *RangeDeleteFileResponse) GetAfterRange() []*ChunkLocation {
+	if x != nil {
+		return x.AfterRange
+	}
+	return nil
+}
+
+func (x *RangeDeleteFileResponse) GetStartOffsetRange() uint64 {
+	if x != nil {
+		return x.StartOffsetRange
+	}
+	return 0
+}
+
+func (x *RangeDeleteFileResponse) GetEndOffsetRange() uint64 {
+	if x != nil {
+		return x.EndOffsetRange
+	}
+	return 0
+}
+
+type UpdateMasterMetadataRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	NewSize       uint64                 `protobuf:"varint,2,opt,name=new_size,json=newSize,proto3" json:"new_size,omitempty"`
+	Chunks        []*ChunkHandle         `protobuf:"bytes,3,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMasterMetadataRequest) Reset() {
+	*x = UpdateMasterMetadataRequest{}
+	mi := &file_master_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMasterMetadataRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMasterMetadataRequest) ProtoMessage() {}
+
+func (x *UpdateMasterMetadataRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMasterMetadataRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMasterMetadataRequest) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UpdateMasterMetadataRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *UpdateMasterMetadataRequest) GetNewSize() uint64 {
+	if x != nil {
+		return x.NewSize
+	}
+	return 0
+}
+
+func (x *UpdateMasterMetadataRequest) GetChunks() []*ChunkHandle {
+	if x != nil {
+		return x.Chunks
+	}
+	return nil
+}
+
+type UpdateMasterMetadataResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMasterMetadataResponse) Reset() {
+	*x = UpdateMasterMetadataResponse{}
+	mi := &file_master_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMasterMetadataResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMasterMetadataResponse) ProtoMessage() {}
+
+func (x *UpdateMasterMetadataResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMasterMetadataResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMasterMetadataResponse) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpdateMasterMetadataResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 var File_master_proto protoreflect.FileDescriptor
 
 const file_master_proto_rawDesc = "" +
@@ -870,7 +1118,25 @@ const file_master_proto_rawDesc = "" +
 	"\x12AppendFileResponse\x12#\n" +
 	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\x12\x16\n" +
 	"\x06offset\x18\x02 \x01(\x04R\x06offset\x120\n" +
-	"\tlocations\x18\x03 \x03(\v2\x12.gfs.ChunkLocationR\tlocations2\xb7\x04\n" +
+	"\tlocations\x18\x03 \x03(\v2\x12.gfs.ChunkLocationR\tlocations\"\\\n" +
+	"\x16RangeDeleteFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x04R\x06offset\x12\x16\n" +
+	"\x06length\x18\x03 \x01(\x04R\x06length\"\xac\x02\n" +
+	"\x17RangeDeleteFileResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\x125\n" +
+	"\fbefore_range\x18\x02 \x03(\v2\x12.gfs.ChunkLocationR\vbeforeRange\x12(\n" +
+	"\x05range\x18\x03 \x03(\v2\x12.gfs.ChunkLocationR\x05range\x123\n" +
+	"\vafter_range\x18\x04 \x03(\v2\x12.gfs.ChunkLocationR\n" +
+	"afterRange\x12,\n" +
+	"\x12start_offset_range\x18\x05 \x01(\x04R\x10startOffsetRange\x12(\n" +
+	"\x10end_offset_range\x18\x06 \x01(\x04R\x0eendOffsetRange\"v\n" +
+	"\x1bUpdateMasterMetadataRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x19\n" +
+	"\bnew_size\x18\x02 \x01(\x04R\anewSize\x12(\n" +
+	"\x06chunks\x18\x03 \x03(\v2\x10.gfs.ChunkHandleR\x06chunks\"C\n" +
+	"\x1cUpdateMasterMetadataResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status2\xe2\x05\n" +
 	"\rMasterService\x12=\n" +
 	"\n" +
 	"CreateFile\x12\x16.gfs.CreateFileRequest\x1a\x17.gfs.CreateFileResponse\x127\n" +
@@ -882,7 +1148,9 @@ const file_master_proto_rawDesc = "" +
 	"\x13UpdateChunkMetadata\x12\x1f.gfs.UpdateChunkMetadataRequest\x1a .gfs.UpdateChunkMetadataResponse\x12:\n" +
 	"\tWriteFile\x12\x15.gfs.WriteFileRequest\x1a\x16.gfs.WriteFileResponse\x12=\n" +
 	"\n" +
-	"AppendFile\x12\x16.gfs.AppendFileRequest\x1a\x17.gfs.AppendFileResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
+	"AppendFile\x12\x16.gfs.AppendFileRequest\x1a\x17.gfs.AppendFileResponse\x12L\n" +
+	"\x0fRangeDeleteFile\x12\x1b.gfs.RangeDeleteFileRequest\x1a\x1c.gfs.RangeDeleteFileResponse\x12[\n" +
+	"\x14UpdateMasterMetadata\x12 .gfs.UpdateMasterMetadataRequest\x1a!.gfs.UpdateMasterMetadataResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
 
 var (
 	file_master_proto_rawDescOnce sync.Once
@@ -896,65 +1164,79 @@ func file_master_proto_rawDescGZIP() []byte {
 	return file_master_proto_rawDescData
 }
 
-var file_master_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_master_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_master_proto_goTypes = []any{
-	(*CreateFileRequest)(nil),           // 0: gfs.CreateFileRequest
-	(*CreateFileResponse)(nil),          // 1: gfs.CreateFileResponse
-	(*OpenFileRequest)(nil),             // 2: gfs.OpenFileRequest
-	(*OpenFileResponse)(nil),            // 3: gfs.OpenFileResponse
-	(*DeleteFileRequest)(nil),           // 4: gfs.DeleteFileRequest
-	(*DeleteFileResponse)(nil),          // 5: gfs.DeleteFileResponse
-	(*GetChunkLocationsRequest)(nil),    // 6: gfs.GetChunkLocationsRequest
-	(*GetChunkLocationsResponse)(nil),   // 7: gfs.GetChunkLocationsResponse
-	(*AllocateChunkRequest)(nil),        // 8: gfs.AllocateChunkRequest
-	(*AllocateChunkResponse)(nil),       // 9: gfs.AllocateChunkResponse
-	(*UpdateChunkMetadataRequest)(nil),  // 10: gfs.UpdateChunkMetadataRequest
-	(*UpdateChunkMetadataResponse)(nil), // 11: gfs.UpdateChunkMetadataResponse
-	(*WriteFileRequest)(nil),            // 12: gfs.WriteFileRequest
-	(*WriteFileResponse)(nil),           // 13: gfs.WriteFileResponse
-	(*AppendFileRequest)(nil),           // 14: gfs.AppendFileRequest
-	(*AppendFileResponse)(nil),          // 15: gfs.AppendFileResponse
-	(*Status)(nil),                      // 16: gfs.Status
-	(*ChunkHandle)(nil),                 // 17: gfs.ChunkHandle
-	(*ChunkLocation)(nil),               // 18: gfs.ChunkLocation
+	(*CreateFileRequest)(nil),            // 0: gfs.CreateFileRequest
+	(*CreateFileResponse)(nil),           // 1: gfs.CreateFileResponse
+	(*OpenFileRequest)(nil),              // 2: gfs.OpenFileRequest
+	(*OpenFileResponse)(nil),             // 3: gfs.OpenFileResponse
+	(*DeleteFileRequest)(nil),            // 4: gfs.DeleteFileRequest
+	(*DeleteFileResponse)(nil),           // 5: gfs.DeleteFileResponse
+	(*GetChunkLocationsRequest)(nil),     // 6: gfs.GetChunkLocationsRequest
+	(*GetChunkLocationsResponse)(nil),    // 7: gfs.GetChunkLocationsResponse
+	(*AllocateChunkRequest)(nil),         // 8: gfs.AllocateChunkRequest
+	(*AllocateChunkResponse)(nil),        // 9: gfs.AllocateChunkResponse
+	(*UpdateChunkMetadataRequest)(nil),   // 10: gfs.UpdateChunkMetadataRequest
+	(*UpdateChunkMetadataResponse)(nil),  // 11: gfs.UpdateChunkMetadataResponse
+	(*WriteFileRequest)(nil),             // 12: gfs.WriteFileRequest
+	(*WriteFileResponse)(nil),            // 13: gfs.WriteFileResponse
+	(*AppendFileRequest)(nil),            // 14: gfs.AppendFileRequest
+	(*AppendFileResponse)(nil),           // 15: gfs.AppendFileResponse
+	(*RangeDeleteFileRequest)(nil),       // 16: gfs.RangeDeleteFileRequest
+	(*RangeDeleteFileResponse)(nil),      // 17: gfs.RangeDeleteFileResponse
+	(*UpdateMasterMetadataRequest)(nil),  // 18: gfs.UpdateMasterMetadataRequest
+	(*UpdateMasterMetadataResponse)(nil), // 19: gfs.UpdateMasterMetadataResponse
+	(*Status)(nil),                       // 20: gfs.Status
+	(*ChunkHandle)(nil),                  // 21: gfs.ChunkHandle
+	(*ChunkLocation)(nil),                // 22: gfs.ChunkLocation
 }
 var file_master_proto_depIdxs = []int32{
-	16, // 0: gfs.CreateFileResponse.status:type_name -> gfs.Status
-	16, // 1: gfs.OpenFileResponse.status:type_name -> gfs.Status
-	17, // 2: gfs.OpenFileResponse.chunks:type_name -> gfs.ChunkHandle
-	16, // 3: gfs.DeleteFileResponse.status:type_name -> gfs.Status
-	17, // 4: gfs.GetChunkLocationsRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	16, // 5: gfs.GetChunkLocationsResponse.status:type_name -> gfs.Status
-	18, // 6: gfs.GetChunkLocationsResponse.location:type_name -> gfs.ChunkLocation
-	16, // 7: gfs.AllocateChunkResponse.status:type_name -> gfs.Status
-	18, // 8: gfs.AllocateChunkResponse.location:type_name -> gfs.ChunkLocation
-	17, // 9: gfs.UpdateChunkMetadataRequest.handle:type_name -> gfs.ChunkHandle
-	16, // 10: gfs.UpdateChunkMetadataResponse.status:type_name -> gfs.Status
-	16, // 11: gfs.WriteFileResponse.status:type_name -> gfs.Status
-	18, // 12: gfs.WriteFileResponse.locations:type_name -> gfs.ChunkLocation
-	16, // 13: gfs.AppendFileResponse.status:type_name -> gfs.Status
-	18, // 14: gfs.AppendFileResponse.locations:type_name -> gfs.ChunkLocation
-	0,  // 15: gfs.MasterService.CreateFile:input_type -> gfs.CreateFileRequest
-	2,  // 16: gfs.MasterService.OpenFile:input_type -> gfs.OpenFileRequest
-	4,  // 17: gfs.MasterService.DeleteFile:input_type -> gfs.DeleteFileRequest
-	6,  // 18: gfs.MasterService.GetChunkLocations:input_type -> gfs.GetChunkLocationsRequest
-	8,  // 19: gfs.MasterService.AllocateChunk:input_type -> gfs.AllocateChunkRequest
-	10, // 20: gfs.MasterService.UpdateChunkMetadata:input_type -> gfs.UpdateChunkMetadataRequest
-	12, // 21: gfs.MasterService.WriteFile:input_type -> gfs.WriteFileRequest
-	14, // 22: gfs.MasterService.AppendFile:input_type -> gfs.AppendFileRequest
-	1,  // 23: gfs.MasterService.CreateFile:output_type -> gfs.CreateFileResponse
-	3,  // 24: gfs.MasterService.OpenFile:output_type -> gfs.OpenFileResponse
-	5,  // 25: gfs.MasterService.DeleteFile:output_type -> gfs.DeleteFileResponse
-	7,  // 26: gfs.MasterService.GetChunkLocations:output_type -> gfs.GetChunkLocationsResponse
-	9,  // 27: gfs.MasterService.AllocateChunk:output_type -> gfs.AllocateChunkResponse
-	11, // 28: gfs.MasterService.UpdateChunkMetadata:output_type -> gfs.UpdateChunkMetadataResponse
-	13, // 29: gfs.MasterService.WriteFile:output_type -> gfs.WriteFileResponse
-	15, // 30: gfs.MasterService.AppendFile:output_type -> gfs.AppendFileResponse
-	23, // [23:31] is the sub-list for method output_type
-	15, // [15:23] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	20, // 0: gfs.CreateFileResponse.status:type_name -> gfs.Status
+	20, // 1: gfs.OpenFileResponse.status:type_name -> gfs.Status
+	21, // 2: gfs.OpenFileResponse.chunks:type_name -> gfs.ChunkHandle
+	20, // 3: gfs.DeleteFileResponse.status:type_name -> gfs.Status
+	21, // 4: gfs.GetChunkLocationsRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	20, // 5: gfs.GetChunkLocationsResponse.status:type_name -> gfs.Status
+	22, // 6: gfs.GetChunkLocationsResponse.location:type_name -> gfs.ChunkLocation
+	20, // 7: gfs.AllocateChunkResponse.status:type_name -> gfs.Status
+	22, // 8: gfs.AllocateChunkResponse.location:type_name -> gfs.ChunkLocation
+	21, // 9: gfs.UpdateChunkMetadataRequest.handle:type_name -> gfs.ChunkHandle
+	20, // 10: gfs.UpdateChunkMetadataResponse.status:type_name -> gfs.Status
+	20, // 11: gfs.WriteFileResponse.status:type_name -> gfs.Status
+	22, // 12: gfs.WriteFileResponse.locations:type_name -> gfs.ChunkLocation
+	20, // 13: gfs.AppendFileResponse.status:type_name -> gfs.Status
+	22, // 14: gfs.AppendFileResponse.locations:type_name -> gfs.ChunkLocation
+	20, // 15: gfs.RangeDeleteFileResponse.status:type_name -> gfs.Status
+	22, // 16: gfs.RangeDeleteFileResponse.before_range:type_name -> gfs.ChunkLocation
+	22, // 17: gfs.RangeDeleteFileResponse.range:type_name -> gfs.ChunkLocation
+	22, // 18: gfs.RangeDeleteFileResponse.after_range:type_name -> gfs.ChunkLocation
+	21, // 19: gfs.UpdateMasterMetadataRequest.chunks:type_name -> gfs.ChunkHandle
+	20, // 20: gfs.UpdateMasterMetadataResponse.status:type_name -> gfs.Status
+	0,  // 21: gfs.MasterService.CreateFile:input_type -> gfs.CreateFileRequest
+	2,  // 22: gfs.MasterService.OpenFile:input_type -> gfs.OpenFileRequest
+	4,  // 23: gfs.MasterService.DeleteFile:input_type -> gfs.DeleteFileRequest
+	6,  // 24: gfs.MasterService.GetChunkLocations:input_type -> gfs.GetChunkLocationsRequest
+	8,  // 25: gfs.MasterService.AllocateChunk:input_type -> gfs.AllocateChunkRequest
+	10, // 26: gfs.MasterService.UpdateChunkMetadata:input_type -> gfs.UpdateChunkMetadataRequest
+	12, // 27: gfs.MasterService.WriteFile:input_type -> gfs.WriteFileRequest
+	14, // 28: gfs.MasterService.AppendFile:input_type -> gfs.AppendFileRequest
+	16, // 29: gfs.MasterService.RangeDeleteFile:input_type -> gfs.RangeDeleteFileRequest
+	18, // 30: gfs.MasterService.UpdateMasterMetadata:input_type -> gfs.UpdateMasterMetadataRequest
+	1,  // 31: gfs.MasterService.CreateFile:output_type -> gfs.CreateFileResponse
+	3,  // 32: gfs.MasterService.OpenFile:output_type -> gfs.OpenFileResponse
+	5,  // 33: gfs.MasterService.DeleteFile:output_type -> gfs.DeleteFileResponse
+	7,  // 34: gfs.MasterService.GetChunkLocations:output_type -> gfs.GetChunkLocationsResponse
+	9,  // 35: gfs.MasterService.AllocateChunk:output_type -> gfs.AllocateChunkResponse
+	11, // 36: gfs.MasterService.UpdateChunkMetadata:output_type -> gfs.UpdateChunkMetadataResponse
+	13, // 37: gfs.MasterService.WriteFile:output_type -> gfs.WriteFileResponse
+	15, // 38: gfs.MasterService.AppendFile:output_type -> gfs.AppendFileResponse
+	17, // 39: gfs.MasterService.RangeDeleteFile:output_type -> gfs.RangeDeleteFileResponse
+	19, // 40: gfs.MasterService.UpdateMasterMetadata:output_type -> gfs.UpdateMasterMetadataResponse
+	31, // [31:41] is the sub-list for method output_type
+	21, // [21:31] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_master_proto_init() }
@@ -969,7 +1251,7 @@ func file_master_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_master_proto_rawDesc), len(file_master_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

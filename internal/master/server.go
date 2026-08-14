@@ -420,3 +420,234 @@ func (m *MasterServer) AppendFile(
 		Locations: locations,
 	}, nil
 }
+
+func (m *MasterServer) RangeDeleteFile(
+	ctx context.Context,
+	req *pb.RangeDeleteFileRequest,
+) (*pb.RangeDeleteFileResponse, error) {
+	before_range, in_range, after_range, startOffset_startChunk, endOffset_endChunk, err := m.metadata.RangeDeleteFile(
+		req.Path,
+		req.Offset,
+		req.Length,
+	)
+
+	if err != nil {
+		if errors.Is(err, ErrFileNotFound) {
+			return &pb.RangeDeleteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "file not found",
+				},
+			}, nil
+		}
+
+		return &pb.RangeDeleteFileResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	before_range_locations := make(
+		[]*pb.ChunkLocation,
+		0,
+		len(before_range),
+	)
+
+	range_locations := make(
+		[]*pb.ChunkLocation,
+		0,
+		len(in_range),
+	)
+
+	after_range_locations := make(
+		[]*pb.ChunkLocation,
+		0,
+		len(after_range),
+	)
+
+	for _, chunkID := range before_range {
+
+		locationResp, err := m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   chunkID,
+					Path: req.Path,
+				},
+			},
+		)
+
+		if err != nil {
+			return &pb.RangeDeleteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
+
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+
+			return &pb.RangeDeleteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "failed to get chunk location",
+				},
+			}, nil
+		}
+
+		before_range_locations = append(
+			before_range_locations,
+			locationResp.Location,
+		)
+	}
+
+	for _, chunkID := range in_range {
+
+		locationResp, err := m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   chunkID,
+					Path: req.Path,
+				},
+			},
+		)
+
+		if err != nil {
+			return &pb.RangeDeleteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
+
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+
+			return &pb.RangeDeleteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "failed to get chunk location",
+				},
+			}, nil
+		}
+
+		range_locations = append(
+			range_locations,
+			locationResp.Location,
+		)
+	}
+
+	for _, chunkID := range after_range {
+
+		locationResp, err := m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   chunkID,
+					Path: req.Path,
+				},
+			},
+		)
+
+		if err != nil {
+			return &pb.RangeDeleteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
+
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+
+			return &pb.RangeDeleteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "failed to get chunk location",
+				},
+			}, nil
+		}
+
+		after_range_locations = append(
+			after_range_locations,
+			locationResp.Location,
+		)
+	}
+
+	return &pb.RangeDeleteFileResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "truncate locations allocated successfully",
+		},
+		BeforeRange:      before_range_locations,
+		Range:            range_locations,
+		AfterRange:       after_range_locations,
+		StartOffsetRange: startOffset_startChunk,
+		EndOffsetRange:   endOffset_endChunk,
+	}, nil
+}
+
+func (m *MasterServer) UpdateMasterMetadata(
+	ctx context.Context,
+	req *pb.UpdateMasterMetadataRequest,
+) (*pb.UpdateMasterMetadataResponse, error) {
+
+	chunkIDs := make([]uint64, 0, len(req.Chunks))
+
+	for _, chunk := range req.Chunks {
+		if chunk == nil {
+			continue
+		}
+
+		chunkIDs = append(
+			chunkIDs,
+			chunk.Id,
+		)
+	}
+
+	err := m.metadata.UpdateMasterMetadata(
+		req.Path,
+		req.NewSize,
+		chunkIDs,
+	)
+
+	if err != nil {
+
+		if errors.Is(err, ErrFileNotFound) {
+			return &pb.UpdateMasterMetadataResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "file not found",
+				},
+			}, nil
+		}
+
+		return &pb.UpdateMasterMetadataResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	fmt.Printf(
+		"[Master] metadata updated: path=%s size=%d chunks=%v\n",
+		req.Path,
+		req.NewSize,
+		chunkIDs,
+	)
+
+	return &pb.UpdateMasterMetadataResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "master metadata updated successfully",
+		},
+	}, nil
+}

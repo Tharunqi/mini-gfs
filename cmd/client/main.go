@@ -12,16 +12,13 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const masterAddr = "localhost:50051"
+
 func main() {
 	ctx := context.Background()
-	path := "hello.txt"
 
-	// =========================================================
-	// Connect to Master
-	// =========================================================
-
-	masterConn, err := grpc.NewClient(
-		"localhost:50051",
+	conn, err := grpc.NewClient(
+		masterAddr,
 		grpc.WithTransportCredentials(
 			insecure.NewCredentials(),
 		),
@@ -29,109 +26,316 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer masterConn.Close()
+	defer conn.Close()
 
-	masterClient := pb.NewMasterServiceClient(masterConn)
+	master := pb.NewMasterServiceClient(conn)
 
 	fmt.Println("Connected to Master")
 
-	// =========================================================
-	// CREATE FILE
-	// =========================================================
+	// ============================================================
+	// CLEANUP
+	// ============================================================
 
-	fmt.Println("\n========== CREATE FILE ==========")
+	path := "boundary_delete_test.txt"
 
-	createResp, err := masterClient.CreateFile(
+	_, _ = master.DeleteFile(
+		ctx,
+		&pb.DeleteFileRequest{
+			Path: path,
+		},
+	)
+
+	// ============================================================
+	// CREATE
+	// ============================================================
+
+	fmt.Println("\n========== CREATE ==========")
+
+	resp, err := master.CreateFile(
 		ctx,
 		&pb.CreateFileRequest{
 			Path: path,
 		},
 	)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if !createResp.Status.Success {
-		log.Fatal(createResp.Status.Message)
-	}
+	checkStatus("CreateFile", resp.Status, err)
 
 	fmt.Println("Created:", path)
 
-	// =========================================================
-	// TEST 1: WRITE ACROSS MULTIPLE CHUNKS
-	//
-	// Chunk size = 10
-	//
-	// Data = "ABCDEFGHIJKLM"
-	// Length = 13
-	//
-	// Chunk 0 → ABCDEFGHIJ
-	// Chunk 1 → KLM
-	// =========================================================
+	// ============================================================
+	// INITIAL WRITE
+	// ============================================================
 
-	fmt.Println("\n========== TEST 1: MULTI-CHUNK WRITE ==========")
+	fmt.Println("\n========== INITIAL WRITE ==========")
 
-	data := []byte("ABCDEFGHIJKLM")
+	initial := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-	writeResp, err := masterClient.WriteFile(
+	writeAt(
 		ctx,
-		&pb.WriteFileRequest{
+		master,
+		path,
+		0,
+		initial,
+	)
+
+	fmt.Println("Initial data:", initial)
+
+	// ============================================================
+	// SHOW INITIAL METADATA
+	// ============================================================
+
+	fmt.Println("\n========== INITIAL METADATA ==========")
+
+	printMetadata(
+		ctx,
+		master,
+		path,
+	)
+
+	// ============================================================
+	// RANGE DELETE
+	// ============================================================
+
+	fmt.Println("\n========== RANGE DELETE ==========")
+
+	offset := uint64(10)
+	length := uint64(10)
+
+	fmt.Printf(
+		"Deleting offset=%d length=%d\n",
+		offset,
+		length,
+	)
+
+	deleteResp, err := master.RangeDeleteFile(
+		ctx,
+		&pb.RangeDeleteFileRequest{
 			Path:   path,
-			Offset: 0,
-			Length: uint64(len(data)),
+			Offset: offset,
+			Length: length,
 		},
 	)
 
+	checkStatus(
+		"RangeDeleteFile",
+		deleteResp.Status,
+		err,
+	)
+
+	fmt.Printf(
+		"Master returned:\n"+
+			"  BeforeRange = %d\n"+
+			"  Affected    = %d\n"+
+			"  AfterRange  = %d\n",
+		len(deleteResp.BeforeRange),
+		len(deleteResp.Range),
+		len(deleteResp.AfterRange),
+	)
+
+	printLocations("Before", deleteResp.BeforeRange)
+	printLocations("Affected", deleteResp.Range)
+	printLocations("After", deleteResp.AfterRange)
+
+	// ============================================================
+	// SEND TO CHUNK SERVER
+	// ============================================================
+
+	if len(deleteResp.Range) == 0 {
+		log.Fatal("Master returned no affected chunks")
+	}
+
+	first := deleteResp.Range[0]
+
+	if first == nil ||
+		first.Primary == nil ||
+		first.Handle == nil {
+		log.Fatal("invalid first affected chunk location")
+	}
+
+	address := fmt.Sprintf(
+		"%s:%d",
+		first.Primary.Host,
+		first.Primary.Port,
+	)
+
+	fmt.Println(
+		"\nSending RangeDeleteChunk to:",
+		address,
+	)
+
+	chunkConn, err := grpc.NewClient(
+		address,
+		grpc.WithTransportCredentials(
+			insecure.NewCredentials(),
+		),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer chunkConn.Close()
 
-	if !writeResp.Status.Success {
-		log.Fatal(writeResp.Status.Message)
+	chunkClient :=
+		pb.NewChunkServiceClient(chunkConn)
+
+	chunkResp, err :=
+		chunkClient.RangeDeleteChunk(
+			ctx,
+			&pb.RangeDeleteChunkRequest{
+				Path:             path,
+				Offset:           offset,
+				Length:           length,
+				BeforeRange:      deleteResp.BeforeRange,
+				Range:            deleteResp.Range,
+				AfterRange:       deleteResp.AfterRange,
+				StartOffsetRange: deleteResp.StartOffsetRange,
+				EndOffsetRange:   deleteResp.EndOffsetRange,
+			},
+		)
+
+	checkStatus(
+		"RangeDeleteChunk",
+		chunkResp.Status,
+		err,
+	)
+
+	fmt.Println(
+		"Chunk server:",
+		chunkResp.Status.Message,
+	)
+
+	// ============================================================
+	// EXPECTED RESULT
+	// ============================================================
+
+	expected :=
+		initial[:offset] +
+			initial[offset+length:]
+
+	fmt.Println("\n========== EXPECTED ==========")
+	fmt.Printf(
+		"%q\n",
+		expected,
+	)
+
+	// ============================================================
+	// READ FINAL FILE
+	// ============================================================
+
+	fmt.Println("\n========== FINAL FILE ==========")
+
+	actual, err :=
+		readFile(
+			ctx,
+			master,
+			path,
+		)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	fmt.Printf(
-		"Master returned %d chunk locations\n",
-		len(writeResp.Locations),
+		"Actual:   %q\n",
+		actual,
 	)
 
-	err = writeDataToChunks(
+	// ============================================================
+	// VERIFY DATA
+	// ============================================================
+
+	fmt.Println("\n========== DATA VERIFICATION ==========")
+
+	if actual != expected {
+		fmt.Println("❌ FAILED")
+		fmt.Printf("Expected: %q\n", expected)
+		fmt.Printf("Actual:   %q\n", actual)
+
+		printMetadata(
+			ctx,
+			master,
+			path,
+		)
+
+		log.Fatal("data mismatch")
+	}
+
+	fmt.Println("✅ DATA CORRECT")
+
+	// ============================================================
+	// VERIFY METADATA
+	// ============================================================
+
+	fmt.Println("\n========== METADATA VERIFICATION ==========")
+
+	printMetadata(
 		ctx,
-		writeResp.Locations,
-		0,
-		data,
+		master,
+		path,
 	)
+
+	metadataResp, err :=
+		master.OpenFile(
+			ctx,
+			&pb.OpenFileRequest{
+				Path: path,
+			},
+		)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Multi-chunk write successful")
+	expectedSize := uint64(len(expected))
 
-	// =========================================================
-	// TEST 2: OVERWRITE ACROSS CHUNK BOUNDARY
-	//
-	// Existing:
-	//
-	// Chunk 0 → ABCDEFGHIJ
-	// Chunk 1 → KLM
-	//
-	// Write "XYZ123" at offset 7
-	//
-	// Chunk 0:
-	// ABCDEFGXYZ
-	//
-	// Chunk 1:
-	// 123
-	// =========================================================
+	expectedChunks := 0
 
-	fmt.Println("\n========== TEST 2: CROSS-CHUNK OVERWRITE ==========")
+	if expectedSize > 0 {
+		expectedChunks = int(
+			(expectedSize +
+				config.ChunkSize -
+				1) /
+				config.ChunkSize,
+		)
+	}
 
-	data = []byte("XYZ123")
-	offset := uint64(7)
+	if metadataResp.SizeBytes != expectedSize {
+		log.Fatalf(
+			"❌ wrong file size: expected=%d actual=%d",
+			expectedSize,
+			metadataResp.SizeBytes,
+		)
+	}
 
-	writeResp, err = masterClient.WriteFile(
+	if len(metadataResp.Chunks) != expectedChunks {
+		log.Fatalf(
+			"❌ wrong chunk count: expected=%d actual=%d",
+			expectedChunks,
+			len(metadataResp.Chunks),
+		)
+	}
+
+	fmt.Println("✅ METADATA CORRECT")
+
+	// ============================================================
+	// FINAL
+	// ============================================================
+
+	fmt.Println("\n========================================")
+	fmt.Println("✅ WHOLE MIDDLE CHUNK DELETE PASSED")
+	fmt.Println("========================================")
+}
+
+// ================================================================
+// WRITE
+// ================================================================
+
+func writeAt(
+	ctx context.Context,
+	master pb.MasterServiceClient,
+	path string,
+	offset uint64,
+	data string,
+) {
+	resp, err := master.WriteFile(
 		ctx,
 		&pb.WriteFileRequest{
 			Path:   path,
@@ -140,135 +344,263 @@ func main() {
 		},
 	)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if !writeResp.Status.Success {
-		log.Fatal(writeResp.Status.Message)
-	}
-
-	fmt.Printf(
-		"Master returned %d chunk locations\n",
-		len(writeResp.Locations),
+	checkStatus(
+		"WriteFile",
+		resp.Status,
+		err,
 	)
 
-	err = writeDataToChunks(
-		ctx,
-		writeResp.Locations,
-		offset,
-		data,
-	)
+	writeOffset := offset
+	dataOffset := 0
 
-	if err != nil {
-		log.Fatal(err)
+	for _, location := range resp.Locations {
+
+		if location == nil ||
+			location.Handle == nil ||
+			location.Primary == nil {
+			log.Fatal("invalid chunk location")
+		}
+
+		chunkOffset :=
+			writeOffset %
+				uint64(config.ChunkSize)
+
+		capacity :=
+			uint64(config.ChunkSize) -
+				chunkOffset
+
+		remaining :=
+			uint64(len(data) - dataOffset)
+
+		writeLength := remaining
+
+		if writeLength > capacity {
+			writeLength = capacity
+		}
+
+		chunkData :=
+			[]byte(
+				data[dataOffset : dataOffset+int(writeLength)],
+			)
+
+		address := fmt.Sprintf(
+			"%s:%d",
+			location.Primary.Host,
+			location.Primary.Port,
+		)
+
+		chunkConn, err := grpc.NewClient(
+			address,
+			grpc.WithTransportCredentials(
+				insecure.NewCredentials(),
+			),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		chunkClient :=
+			pb.NewChunkServiceClient(chunkConn)
+
+		writeResp, err :=
+			chunkClient.WriteChunk(
+				ctx,
+				&pb.WriteChunkRequest{
+					ChunkHandle: location.Handle,
+					Offset:      chunkOffset,
+					Data:        chunkData,
+				},
+			)
+
+		chunkConn.Close()
+
+		checkStatus(
+			"WriteChunk",
+			writeResp.Status,
+			err,
+		)
+
+		fmt.Printf(
+			"Chunk %d: wrote %d bytes\n",
+			location.Handle.Id,
+			writeLength,
+		)
+
+		dataOffset += int(writeLength)
+		writeOffset += writeLength
+
+		if dataOffset == len(data) {
+			break
+		}
 	}
 
-	fmt.Println("Cross-chunk overwrite successful")
+	if dataOffset != len(data) {
+		log.Fatalf(
+			"only wrote %d/%d bytes",
+			dataOffset,
+			len(data),
+		)
+	}
+}
 
-	// =========================================================
-	// TEST 3: SIMPLE APPEND
-	//
-	// Append "HELLO"
-	//
-	// Master decides the offset.
-	// =========================================================
+// ================================================================
+// READ
+// ================================================================
 
-	fmt.Println("\n========== TEST 3: APPEND ==========")
+func readFile(
+	ctx context.Context,
+	master pb.MasterServiceClient,
+	path string,
+) (string, error) {
 
-	appendData := []byte("HELLO")
-
-	appendResp, err := masterClient.AppendFile(
+	resp, err := master.OpenFile(
 		ctx,
-		&pb.AppendFileRequest{
-			Path:   path,
-			Length: uint64(len(appendData)),
+		&pb.OpenFileRequest{
+			Path: path,
 		},
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
-	if !appendResp.Status.Success {
-		log.Fatal(appendResp.Status.Message)
+	if resp.Status == nil ||
+		!resp.Status.Success {
+		return "",
+			fmt.Errorf(
+				"OpenFile failed: %s",
+				resp.Status.Message,
+			)
 	}
 
-	fmt.Println("Append offset:", appendResp.Offset)
+	var result []byte
+	remaining := resp.SizeBytes
 
-	fmt.Printf(
-		"Master returned %d chunk locations\n",
-		len(appendResp.Locations),
-	)
+	for i, handle := range resp.Chunks {
 
-	err = writeDataToChunks(
-		ctx,
-		appendResp.Locations,
-		appendResp.Offset,
-		appendData,
-	)
+		if remaining == 0 {
+			break
+		}
 
-	if err != nil {
-		log.Fatal(err)
+		locationResp, err :=
+			master.GetChunkLocations(
+				ctx,
+				&pb.GetChunkLocationsRequest{
+					ChunkHandle: handle,
+				},
+			)
+
+		if err != nil {
+			return "", err
+		}
+
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+			return "",
+				fmt.Errorf(
+					"GetChunkLocations failed for %d",
+					handle.Id,
+				)
+		}
+
+		location := locationResp.Location
+
+		if location == nil ||
+			location.Primary == nil {
+			return "",
+				fmt.Errorf(
+					"chunk %d has no primary",
+					handle.Id,
+				)
+		}
+
+		readLength := remaining
+
+		if readLength >
+			uint64(config.ChunkSize) {
+			readLength =
+				uint64(config.ChunkSize)
+		}
+
+		address := fmt.Sprintf(
+			"%s:%d",
+			location.Primary.Host,
+			location.Primary.Port,
+		)
+
+		chunkConn, err := grpc.NewClient(
+			address,
+			grpc.WithTransportCredentials(
+				insecure.NewCredentials(),
+			),
+		)
+		if err != nil {
+			return "", err
+		}
+
+		chunkClient :=
+			pb.NewChunkServiceClient(chunkConn)
+
+		readResp, err :=
+			chunkClient.ReadChunk(
+				ctx,
+				&pb.ReadChunkRequest{
+					ChunkHandle: handle,
+					Offset:      0,
+					Length:      readLength,
+				},
+			)
+
+		chunkConn.Close()
+
+		if err != nil {
+			return "",
+				fmt.Errorf(
+					"ReadChunk %d: %w",
+					handle.Id,
+					err,
+				)
+		}
+
+		if readResp.Status == nil ||
+			!readResp.Status.Success {
+			return "",
+				fmt.Errorf(
+					"ReadChunk %d failed",
+					handle.Id,
+				)
+		}
+
+		fmt.Printf(
+			"Chunk[%d] ID=%d → %q\n",
+			i,
+			handle.Id,
+			string(readResp.Data),
+		)
+
+		result =
+			append(
+				result,
+				readResp.Data...,
+			)
+
+		remaining -=
+			uint64(len(readResp.Data))
 	}
 
-	fmt.Println("Append successful")
+	return string(result), nil
+}
 
-	// =========================================================
-	// TEST 4: MULTI-CHUNK APPEND
-	//
-	// Append 25 bytes.
-	//
-	// This should span multiple chunks with ChunkSize = 10.
-	// =========================================================
+// ================================================================
+// METADATA
+// ================================================================
 
-	fmt.Println("\n========== TEST 4: MULTI-CHUNK APPEND ==========")
-
-	appendData = []byte("1234567890123456789012345")
-
-	appendResp, err = masterClient.AppendFile(
-		ctx,
-		&pb.AppendFileRequest{
-			Path:   path,
-			Length: uint64(len(appendData)),
-		},
-	)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if !appendResp.Status.Success {
-		log.Fatal(appendResp.Status.Message)
-	}
-
-	fmt.Println("Append offset:", appendResp.Offset)
-
-	fmt.Printf(
-		"Master returned %d chunk locations\n",
-		len(appendResp.Locations),
-	)
-
-	err = writeDataToChunks(
-		ctx,
-		appendResp.Locations,
-		appendResp.Offset,
-		appendData,
-	)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Multi-chunk append successful")
-
-	// =========================================================
-	// FINAL OPEN
-	// =========================================================
-
-	fmt.Println("\n========== FINAL FILE ==========")
-
-	openResp, err := masterClient.OpenFile(
+func printMetadata(
+	ctx context.Context,
+	master pb.MasterServiceClient,
+	path string,
+) {
+	resp, err := master.OpenFile(
 		ctx,
 		&pb.OpenFileRequest{
 			Path: path,
@@ -279,161 +611,86 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if !openResp.Status.Success {
-		log.Fatal(openResp.Status.Message)
+	if resp.Status == nil ||
+		!resp.Status.Success {
+		log.Fatal("OpenFile failed")
 	}
 
-	fmt.Println("File size:", openResp.SizeBytes)
-	fmt.Println("Number of chunks:", len(openResp.Chunks))
+	fmt.Printf(
+		"Size: %d\n",
+		resp.SizeBytes,
+	)
 
-	for i, chunk := range openResp.Chunks {
+	fmt.Printf(
+		"Chunks: %d\n",
+		len(resp.Chunks),
+	)
+
+	for i, chunk := range resp.Chunks {
 		fmt.Printf(
-			"Chunk %d → ID=%d Path=%s\n",
+			"  logical[%d] → ID=%d\n",
 			i,
 			chunk.Id,
-			chunk.Path,
 		)
 	}
 }
 
-// =============================================================
-// CLIENT-SIDE DATA SPLITTING
-//
-// This uses the EXISTING WriteChunk RPC.
-// =============================================================
+// ================================================================
+// LOCATION PRINT
+// ================================================================
 
-func writeDataToChunks(
-	ctx context.Context,
+func printLocations(
+	name string,
 	locations []*pb.ChunkLocation,
-	fileOffset uint64,
-	data []byte,
-) error {
-
-	dataOffset := 0
+) {
+	fmt.Printf(
+		"%s:\n",
+		name,
+	)
 
 	for _, location := range locations {
 
-		if location == nil {
-			return fmt.Errorf("nil chunk location")
-		}
-
-		if location.Handle == nil {
-			return fmt.Errorf("chunk location has no handle")
-		}
-
-		if location.Primary == nil {
-			return fmt.Errorf(
-				"chunk %d has no primary",
-				location.Handle.Id,
-			)
-		}
-
-		// Offset inside the current chunk.
-		chunkOffset := fileOffset % config.ChunkSize
-
-		// Remaining space in this chunk.
-		remainingChunkSpace :=
-			config.ChunkSize - chunkOffset
-
-		// Remaining data.
-		remainingData :=
-			uint64(len(data) - dataOffset)
-
-		writeLength := remainingData
-
-		if writeLength > remainingChunkSpace {
-			writeLength = remainingChunkSpace
-		}
-
-		chunkData := data[dataOffset : dataOffset+int(writeLength)]
-
-		fmt.Printf(
-			"Writing %d bytes → chunk %d at offset %d\n",
-			writeLength,
-			location.Handle.Id,
-			chunkOffset,
-		)
-
-		// -----------------------------------------------------
-		// Connect to primary Chunk Server
-		// -----------------------------------------------------
-
-		address := fmt.Sprintf(
-			"%s:%d",
-			location.Primary.Host,
-			location.Primary.Port,
-		)
-
-		conn, err := grpc.NewClient(
-			address,
-			grpc.WithTransportCredentials(
-				insecure.NewCredentials(),
-			),
-		)
-
-		if err != nil {
-			return fmt.Errorf(
-				"failed to connect to chunk server %s: %w",
-				address,
-				err,
-			)
-		}
-
-		chunkClient := pb.NewChunkServiceClient(conn)
-
-		// -----------------------------------------------------
-		// EXISTING WriteChunk RPC
-		// -----------------------------------------------------
-
-		writeResp, err := chunkClient.WriteChunk(
-			ctx,
-			&pb.WriteChunkRequest{
-				ChunkHandle: location.Handle,
-				Offset:      chunkOffset,
-				Data:        chunkData,
-			},
-		)
-
-		conn.Close()
-
-		if err != nil {
-			return fmt.Errorf(
-				"WriteChunk failed for chunk %d: %w",
-				location.Handle.Id,
-				err,
-			)
-		}
-
-		if writeResp == nil ||
-			writeResp.Status == nil ||
-			!writeResp.Status.Success {
-
-			return fmt.Errorf(
-				"chunk %d write failed",
-				location.Handle.Id,
-			)
+		if location == nil ||
+			location.Handle == nil {
+			continue
 		}
 
 		fmt.Printf(
-			"Chunk %d write successful\n",
+			"  chunk ID=%d\n",
 			location.Handle.Id,
 		)
-
-		dataOffset += int(writeLength)
-		fileOffset += writeLength
-
-		if dataOffset == len(data) {
-			break
-		}
 	}
+}
 
-	if dataOffset != len(data) {
-		return fmt.Errorf(
-			"only wrote %d/%d bytes",
-			dataOffset,
-			len(data),
+// ================================================================
+// STATUS CHECK
+// ================================================================
+
+func checkStatus(
+	name string,
+	status *pb.Status,
+	err error,
+) {
+	if err != nil {
+		log.Fatalf(
+			"%s RPC failed: %v",
+			name,
+			err,
 		)
 	}
 
-	return nil
+	if status == nil {
+		log.Fatalf(
+			"%s returned nil status",
+			name,
+		)
+	}
+
+	if !status.Success {
+		log.Fatalf(
+			"%s failed: %s",
+			name,
+			status.Message,
+		)
+	}
 }

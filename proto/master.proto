@@ -82,6 +82,31 @@ message AppendFileResponse{
     repeated ChunkLocation locations = 3;
 }
 
+message RangeDeleteFileRequest{
+    string path = 1;
+    uint64 offset = 2;
+    uint64 length = 3;
+}
+
+message RangeDeleteFileResponse{
+    Status status = 1;
+    repeated ChunkLocation before_range= 2;
+    repeated ChunkLocation range = 3;
+    repeated ChunkLocation after_range = 4;
+    uint64 start_offset_range = 5;
+    uint64 end_offset_range = 6;
+}
+
+message UpdateMasterMetadataRequest {
+    string path = 1;
+    uint64 new_size = 2;
+    repeated ChunkHandle chunks = 3;
+}
+
+message UpdateMasterMetadataResponse {
+    Status status = 1;
+}
+
 service MasterService {
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
 
@@ -99,4 +124,8 @@ service MasterService {
 
     rpc AppendFile(AppendFileRequest) returns (AppendFileResponse);
 
+    rpc RangeDeleteFile(RangeDeleteFileRequest) returns (RangeDeleteFileResponse);
+
+    rpc UpdateMasterMetadata(UpdateMasterMetadataRequest)
+    returns (UpdateMasterMetadataResponse);
 }
