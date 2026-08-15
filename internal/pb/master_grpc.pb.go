@@ -24,11 +24,11 @@ const (
 	MasterService_DeleteFile_FullMethodName           = "/gfs.MasterService/DeleteFile"
 	MasterService_GetChunkLocations_FullMethodName    = "/gfs.MasterService/GetChunkLocations"
 	MasterService_AllocateChunk_FullMethodName        = "/gfs.MasterService/AllocateChunk"
-	MasterService_UpdateChunkMetadata_FullMethodName  = "/gfs.MasterService/UpdateChunkMetadata"
 	MasterService_WriteFile_FullMethodName            = "/gfs.MasterService/WriteFile"
 	MasterService_AppendFile_FullMethodName           = "/gfs.MasterService/AppendFile"
 	MasterService_RangeDeleteFile_FullMethodName      = "/gfs.MasterService/RangeDeleteFile"
 	MasterService_UpdateMasterMetadata_FullMethodName = "/gfs.MasterService/UpdateMasterMetadata"
+	MasterService_TruncateFile_FullMethodName         = "/gfs.MasterService/TruncateFile"
 )
 
 // MasterServiceClient is the client API for MasterService service.
@@ -40,11 +40,11 @@ type MasterServiceClient interface {
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
 	GetChunkLocations(ctx context.Context, in *GetChunkLocationsRequest, opts ...grpc.CallOption) (*GetChunkLocationsResponse, error)
 	AllocateChunk(ctx context.Context, in *AllocateChunkRequest, opts ...grpc.CallOption) (*AllocateChunkResponse, error)
-	UpdateChunkMetadata(ctx context.Context, in *UpdateChunkMetadataRequest, opts ...grpc.CallOption) (*UpdateChunkMetadataResponse, error)
 	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error)
 	AppendFile(ctx context.Context, in *AppendFileRequest, opts ...grpc.CallOption) (*AppendFileResponse, error)
 	RangeDeleteFile(ctx context.Context, in *RangeDeleteFileRequest, opts ...grpc.CallOption) (*RangeDeleteFileResponse, error)
 	UpdateMasterMetadata(ctx context.Context, in *UpdateMasterMetadataRequest, opts ...grpc.CallOption) (*UpdateMasterMetadataResponse, error)
+	TruncateFile(ctx context.Context, in *TruncateFileRequest, opts ...grpc.CallOption) (*TruncateFileResponse, error)
 }
 
 type masterServiceClient struct {
@@ -105,16 +105,6 @@ func (c *masterServiceClient) AllocateChunk(ctx context.Context, in *AllocateChu
 	return out, nil
 }
 
-func (c *masterServiceClient) UpdateChunkMetadata(ctx context.Context, in *UpdateChunkMetadataRequest, opts ...grpc.CallOption) (*UpdateChunkMetadataResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateChunkMetadataResponse)
-	err := c.cc.Invoke(ctx, MasterService_UpdateChunkMetadata_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *masterServiceClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WriteFileResponse)
@@ -155,6 +145,16 @@ func (c *masterServiceClient) UpdateMasterMetadata(ctx context.Context, in *Upda
 	return out, nil
 }
 
+func (c *masterServiceClient) TruncateFile(ctx context.Context, in *TruncateFileRequest, opts ...grpc.CallOption) (*TruncateFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TruncateFileResponse)
+	err := c.cc.Invoke(ctx, MasterService_TruncateFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterServiceServer is the server API for MasterService service.
 // All implementations must embed UnimplementedMasterServiceServer
 // for forward compatibility.
@@ -164,11 +164,11 @@ type MasterServiceServer interface {
 	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
 	GetChunkLocations(context.Context, *GetChunkLocationsRequest) (*GetChunkLocationsResponse, error)
 	AllocateChunk(context.Context, *AllocateChunkRequest) (*AllocateChunkResponse, error)
-	UpdateChunkMetadata(context.Context, *UpdateChunkMetadataRequest) (*UpdateChunkMetadataResponse, error)
 	WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error)
 	AppendFile(context.Context, *AppendFileRequest) (*AppendFileResponse, error)
 	RangeDeleteFile(context.Context, *RangeDeleteFileRequest) (*RangeDeleteFileResponse, error)
 	UpdateMasterMetadata(context.Context, *UpdateMasterMetadataRequest) (*UpdateMasterMetadataResponse, error)
+	TruncateFile(context.Context, *TruncateFileRequest) (*TruncateFileResponse, error)
 	mustEmbedUnimplementedMasterServiceServer()
 }
 
@@ -194,9 +194,6 @@ func (UnimplementedMasterServiceServer) GetChunkLocations(context.Context, *GetC
 func (UnimplementedMasterServiceServer) AllocateChunk(context.Context, *AllocateChunkRequest) (*AllocateChunkResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AllocateChunk not implemented")
 }
-func (UnimplementedMasterServiceServer) UpdateChunkMetadata(context.Context, *UpdateChunkMetadataRequest) (*UpdateChunkMetadataResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateChunkMetadata not implemented")
-}
 func (UnimplementedMasterServiceServer) WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method WriteFile not implemented")
 }
@@ -208,6 +205,9 @@ func (UnimplementedMasterServiceServer) RangeDeleteFile(context.Context, *RangeD
 }
 func (UnimplementedMasterServiceServer) UpdateMasterMetadata(context.Context, *UpdateMasterMetadataRequest) (*UpdateMasterMetadataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateMasterMetadata not implemented")
+}
+func (UnimplementedMasterServiceServer) TruncateFile(context.Context, *TruncateFileRequest) (*TruncateFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TruncateFile not implemented")
 }
 func (UnimplementedMasterServiceServer) mustEmbedUnimplementedMasterServiceServer() {}
 func (UnimplementedMasterServiceServer) testEmbeddedByValue()                       {}
@@ -320,24 +320,6 @@ func _MasterService_AllocateChunk_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MasterService_UpdateChunkMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateChunkMetadataRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MasterServiceServer).UpdateChunkMetadata(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MasterService_UpdateChunkMetadata_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MasterServiceServer).UpdateChunkMetadata(ctx, req.(*UpdateChunkMetadataRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _MasterService_WriteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WriteFileRequest)
 	if err := dec(in); err != nil {
@@ -410,6 +392,24 @@ func _MasterService_UpdateMasterMetadata_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MasterService_TruncateFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TruncateFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).TruncateFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterService_TruncateFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).TruncateFile(ctx, req.(*TruncateFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MasterService_ServiceDesc is the grpc.ServiceDesc for MasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -438,10 +438,6 @@ var MasterService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MasterService_AllocateChunk_Handler,
 		},
 		{
-			MethodName: "UpdateChunkMetadata",
-			Handler:    _MasterService_UpdateChunkMetadata_Handler,
-		},
-		{
 			MethodName: "WriteFile",
 			Handler:    _MasterService_WriteFile_Handler,
 		},
@@ -456,6 +452,10 @@ var MasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateMasterMetadata",
 			Handler:    _MasterService_UpdateMasterMetadata_Handler,
+		},
+		{
+			MethodName: "TruncateFile",
+			Handler:    _MasterService_TruncateFile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

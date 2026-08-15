@@ -2,14 +2,16 @@ package master
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/Tharunqi/mini-gfs/internal/config"
 )
 
 var (
-	ErrFileExists   = errors.New("file already exists")
-	ErrFileNotFound = errors.New("file not found")
+	ErrFileExists    = errors.New("file already exists")
+	ErrFileNotFound  = errors.New("file not found")
+	ErrChunkNotFound = errors.New("chunk not found")
 )
 
 type ChunkHandle struct {
@@ -87,30 +89,41 @@ func (m *MetadataStore) GetChunkLocations(chunkHandle uint64) ([]string, error) 
 	return []string{"localhost:50052"}, nil
 }
 
-func (m *MetadataStore) AllocateChunk(path string) (uint64, error) {
+func (m *MetadataStore) AllocateChunk(path string, index uint64) (uint64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	file, exists := m.files[path]
+	if !exists {
+		return 0, ErrFileNotFound
+	}
+
+	if index > uint64(len(file.ChunkHandles)) {
+		return 0, fmt.Errorf(
+			"chunk index %d out of range (chunk count %d)",
+			index,
+			len(file.ChunkHandles),
+		)
+	}
+
 	m.chunkid++
-	m.files[path].ChunkHandles = append(m.files[path].ChunkHandles, m.chunkid)
 
-	return m.chunkid, nil
-}
+	newHandle := m.chunkid
 
-func (m *MetadataStore) UpdateChunkMetadata(handle ChunkHandle, offset uint64, bytesWritten uint64) error {
+	// Insert at index.
+	file.ChunkHandles = append(
+		file.ChunkHandles,
+		0,
+	)
 
-	end := offset + bytesWritten
+	copy(
+		file.ChunkHandles[index+1:],
+		file.ChunkHandles[index:],
+	)
 
-	// Find the file containing this chunk.
-	var file *FileMetadata
-	file = m.files[handle.path]
+	file.ChunkHandles[index] = newHandle
 
-	if file == nil {
-		return ErrFileNotFound
-	}
-	// Then:
-	if end > file.SizeBytes {
-		file.SizeBytes = end
-	}
-
-	return nil
+	return newHandle, nil
 }
 
 func (m *MetadataStore) WriteFile(path string, offset uint64, length uint64) ([]uint64, error) {
@@ -144,11 +157,6 @@ func (m *MetadataStore) WriteFile(path string, offset uint64, length uint64) ([]
 			file.ChunkHandles,
 			m.chunkid,
 		)
-	}
-
-	// Update file size if necessary.
-	if endOffset > file.SizeBytes {
-		file.SizeBytes = endOffset
 	}
 
 	// Return all chunks affected by this write.
@@ -279,8 +287,9 @@ func (m *MetadataStore) RangeDeleteFile(path string, offset uint64, length uint6
 
 func (m *MetadataStore) UpdateMasterMetadata(
 	path string,
-	newSize uint64,
-	chunkIDs []uint64,
+	size uint64,
+	chunk ChunkHandle,
+	isDelete uint64,
 ) error {
 
 	m.mu.Lock()
@@ -291,13 +300,118 @@ func (m *MetadataStore) UpdateMasterMetadata(
 		return ErrFileNotFound
 	}
 
-	// Replace the old chunk list completely.
-	file.ChunkHandles = append(
-		[]uint64(nil),
-		chunkIDs...,
-	)
-
-	file.SizeBytes = newSize
-
+	if isDelete == 0 {
+		// Remove the chunk from the file's chunk handles.
+		for i, handle := range file.ChunkHandles {
+			if handle == chunk.Id {
+				file.ChunkHandles = append(
+					file.ChunkHandles[:i],
+					file.ChunkHandles[i+1:]...,
+				)
+				break
+			}
+		}
+		file.SizeBytes = file.SizeBytes - size
+	} else if isDelete == 1 {
+		file.SizeBytes = file.SizeBytes - size
+	} else {
+		file.SizeBytes = file.SizeBytes + size
+	}
 	return nil
+}
+
+func (m *MetadataStore) TruncateFile(
+	path string,
+	size uint64,
+) (
+	deleteChunks []uint64,
+	truncateChunk uint64,
+	truncateChunkSize uint64,
+	err error,
+) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	file, exists := m.files[path]
+	if !exists {
+		return nil, 0, 0, ErrFileNotFound
+	}
+
+	// Cannot extend using truncate.
+	if size > file.SizeBytes {
+		return nil, 0, 0, errors.New(
+			"truncate size exceeds file size",
+		)
+	}
+
+	// Nothing to do.
+	if size == file.SizeBytes {
+		return []uint64{}, 0, 0, nil
+	}
+
+	// ------------------------------------------------------------
+	// TRUNCATE TO ZERO
+	// ------------------------------------------------------------
+
+	if size == 0 {
+
+		deleteChunks = make(
+			[]uint64,
+			len(file.ChunkHandles),
+		)
+
+		copy(
+			deleteChunks,
+			file.ChunkHandles,
+		)
+
+		return deleteChunks, 0, 0, nil
+	}
+
+	// ------------------------------------------------------------
+	// FIND FINAL SURVIVING CHUNK
+	// ------------------------------------------------------------
+
+	chunkSize := uint64(config.ChunkSize)
+
+	// Index of the chunk containing the final surviving byte.
+	truncateChunkIndex :=
+		(size - 1) / chunkSize
+
+	// Number of bytes that should remain in that chunk.
+	truncateChunkSize = size % chunkSize
+
+	// If size falls exactly on a chunk boundary,
+	// the final surviving chunk is completely full.
+	if truncateChunkSize == 0 {
+		truncateChunkSize = chunkSize
+	}
+
+	// Safety check.
+	if truncateChunkIndex >= uint64(len(file.ChunkHandles)) {
+		return nil, 0, 0, fmt.Errorf(
+			"truncate chunk index %d out of range",
+			truncateChunkIndex,
+		)
+	}
+
+	truncateChunk =
+		file.ChunkHandles[truncateChunkIndex]
+
+	// ------------------------------------------------------------
+	// CHUNKS AFTER THE FINAL SURVIVING CHUNK
+	// ------------------------------------------------------------
+
+	deleteStart :=
+		int(truncateChunkIndex) + 1
+
+	if deleteStart < len(file.ChunkHandles) {
+
+		deleteChunks = append(
+			deleteChunks,
+			file.ChunkHandles[deleteStart:]...,
+		)
+	}
+
+	return deleteChunks, truncateChunk, truncateChunkSize, nil
 }

@@ -400,6 +400,7 @@ func (x *GetChunkLocationsResponse) GetLocation() *ChunkLocation {
 type AllocateChunkRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Index         uint64                 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -439,6 +440,13 @@ func (x *AllocateChunkRequest) GetPath() string {
 		return x.Path
 	}
 	return ""
+}
+
+func (x *AllocateChunkRequest) GetIndex() uint64 {
+	if x != nil {
+		return x.Index
+	}
+	return 0
 }
 
 type AllocateChunkResponse struct {
@@ -493,110 +501,6 @@ func (x *AllocateChunkResponse) GetLocation() *ChunkLocation {
 	return nil
 }
 
-type UpdateChunkMetadataRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Handle        *ChunkHandle           `protobuf:"bytes,1,opt,name=handle,proto3" json:"handle,omitempty"`
-	BytesWritten  uint64                 `protobuf:"varint,2,opt,name=bytes_written,json=bytesWritten,proto3" json:"bytes_written,omitempty"`
-	Offset        uint64                 `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateChunkMetadataRequest) Reset() {
-	*x = UpdateChunkMetadataRequest{}
-	mi := &file_master_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateChunkMetadataRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateChunkMetadataRequest) ProtoMessage() {}
-
-func (x *UpdateChunkMetadataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateChunkMetadataRequest.ProtoReflect.Descriptor instead.
-func (*UpdateChunkMetadataRequest) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *UpdateChunkMetadataRequest) GetHandle() *ChunkHandle {
-	if x != nil {
-		return x.Handle
-	}
-	return nil
-}
-
-func (x *UpdateChunkMetadataRequest) GetBytesWritten() uint64 {
-	if x != nil {
-		return x.BytesWritten
-	}
-	return 0
-}
-
-func (x *UpdateChunkMetadataRequest) GetOffset() uint64 {
-	if x != nil {
-		return x.Offset
-	}
-	return 0
-}
-
-type UpdateChunkMetadataResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateChunkMetadataResponse) Reset() {
-	*x = UpdateChunkMetadataResponse{}
-	mi := &file_master_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateChunkMetadataResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateChunkMetadataResponse) ProtoMessage() {}
-
-func (x *UpdateChunkMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateChunkMetadataResponse.ProtoReflect.Descriptor instead.
-func (*UpdateChunkMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *UpdateChunkMetadataResponse) GetStatus() *Status {
-	if x != nil {
-		return x.Status
-	}
-	return nil
-}
-
 type WriteFileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
@@ -608,7 +512,7 @@ type WriteFileRequest struct {
 
 func (x *WriteFileRequest) Reset() {
 	*x = WriteFileRequest{}
-	mi := &file_master_proto_msgTypes[12]
+	mi := &file_master_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -620,7 +524,7 @@ func (x *WriteFileRequest) String() string {
 func (*WriteFileRequest) ProtoMessage() {}
 
 func (x *WriteFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[12]
+	mi := &file_master_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,7 +537,7 @@ func (x *WriteFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteFileRequest.ProtoReflect.Descriptor instead.
 func (*WriteFileRequest) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{12}
+	return file_master_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *WriteFileRequest) GetPath() string {
@@ -667,7 +571,7 @@ type WriteFileResponse struct {
 
 func (x *WriteFileResponse) Reset() {
 	*x = WriteFileResponse{}
-	mi := &file_master_proto_msgTypes[13]
+	mi := &file_master_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +583,7 @@ func (x *WriteFileResponse) String() string {
 func (*WriteFileResponse) ProtoMessage() {}
 
 func (x *WriteFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[13]
+	mi := &file_master_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +596,7 @@ func (x *WriteFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteFileResponse.ProtoReflect.Descriptor instead.
 func (*WriteFileResponse) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{13}
+	return file_master_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *WriteFileResponse) GetStatus() *Status {
@@ -719,7 +623,7 @@ type AppendFileRequest struct {
 
 func (x *AppendFileRequest) Reset() {
 	*x = AppendFileRequest{}
-	mi := &file_master_proto_msgTypes[14]
+	mi := &file_master_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +635,7 @@ func (x *AppendFileRequest) String() string {
 func (*AppendFileRequest) ProtoMessage() {}
 
 func (x *AppendFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[14]
+	mi := &file_master_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +648,7 @@ func (x *AppendFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendFileRequest.ProtoReflect.Descriptor instead.
 func (*AppendFileRequest) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{14}
+	return file_master_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AppendFileRequest) GetPath() string {
@@ -772,7 +676,7 @@ type AppendFileResponse struct {
 
 func (x *AppendFileResponse) Reset() {
 	*x = AppendFileResponse{}
-	mi := &file_master_proto_msgTypes[15]
+	mi := &file_master_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -784,7 +688,7 @@ func (x *AppendFileResponse) String() string {
 func (*AppendFileResponse) ProtoMessage() {}
 
 func (x *AppendFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[15]
+	mi := &file_master_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -797,7 +701,7 @@ func (x *AppendFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendFileResponse.ProtoReflect.Descriptor instead.
 func (*AppendFileResponse) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{15}
+	return file_master_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AppendFileResponse) GetStatus() *Status {
@@ -832,7 +736,7 @@ type RangeDeleteFileRequest struct {
 
 func (x *RangeDeleteFileRequest) Reset() {
 	*x = RangeDeleteFileRequest{}
-	mi := &file_master_proto_msgTypes[16]
+	mi := &file_master_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -844,7 +748,7 @@ func (x *RangeDeleteFileRequest) String() string {
 func (*RangeDeleteFileRequest) ProtoMessage() {}
 
 func (x *RangeDeleteFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[16]
+	mi := &file_master_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -857,7 +761,7 @@ func (x *RangeDeleteFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RangeDeleteFileRequest.ProtoReflect.Descriptor instead.
 func (*RangeDeleteFileRequest) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{16}
+	return file_master_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RangeDeleteFileRequest) GetPath() string {
@@ -895,7 +799,7 @@ type RangeDeleteFileResponse struct {
 
 func (x *RangeDeleteFileResponse) Reset() {
 	*x = RangeDeleteFileResponse{}
-	mi := &file_master_proto_msgTypes[17]
+	mi := &file_master_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -907,7 +811,7 @@ func (x *RangeDeleteFileResponse) String() string {
 func (*RangeDeleteFileResponse) ProtoMessage() {}
 
 func (x *RangeDeleteFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[17]
+	mi := &file_master_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -920,7 +824,7 @@ func (x *RangeDeleteFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RangeDeleteFileResponse.ProtoReflect.Descriptor instead.
 func (*RangeDeleteFileResponse) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{17}
+	return file_master_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RangeDeleteFileResponse) GetStatus() *Status {
@@ -968,15 +872,16 @@ func (x *RangeDeleteFileResponse) GetEndOffsetRange() uint64 {
 type UpdateMasterMetadataRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	NewSize       uint64                 `protobuf:"varint,2,opt,name=new_size,json=newSize,proto3" json:"new_size,omitempty"`
-	Chunks        []*ChunkHandle         `protobuf:"bytes,3,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	Size          uint64                 `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
+	Chunk         *ChunkHandle           `protobuf:"bytes,3,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	Delete        uint64                 `protobuf:"varint,4,opt,name=delete,proto3" json:"delete,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateMasterMetadataRequest) Reset() {
 	*x = UpdateMasterMetadataRequest{}
-	mi := &file_master_proto_msgTypes[18]
+	mi := &file_master_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -988,7 +893,7 @@ func (x *UpdateMasterMetadataRequest) String() string {
 func (*UpdateMasterMetadataRequest) ProtoMessage() {}
 
 func (x *UpdateMasterMetadataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[18]
+	mi := &file_master_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1001,7 +906,7 @@ func (x *UpdateMasterMetadataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMasterMetadataRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMasterMetadataRequest) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{18}
+	return file_master_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateMasterMetadataRequest) GetPath() string {
@@ -1011,18 +916,25 @@ func (x *UpdateMasterMetadataRequest) GetPath() string {
 	return ""
 }
 
-func (x *UpdateMasterMetadataRequest) GetNewSize() uint64 {
+func (x *UpdateMasterMetadataRequest) GetSize() uint64 {
 	if x != nil {
-		return x.NewSize
+		return x.Size
 	}
 	return 0
 }
 
-func (x *UpdateMasterMetadataRequest) GetChunks() []*ChunkHandle {
+func (x *UpdateMasterMetadataRequest) GetChunk() *ChunkHandle {
 	if x != nil {
-		return x.Chunks
+		return x.Chunk
 	}
 	return nil
+}
+
+func (x *UpdateMasterMetadataRequest) GetDelete() uint64 {
+	if x != nil {
+		return x.Delete
+	}
+	return 0
 }
 
 type UpdateMasterMetadataResponse struct {
@@ -1034,7 +946,7 @@ type UpdateMasterMetadataResponse struct {
 
 func (x *UpdateMasterMetadataResponse) Reset() {
 	*x = UpdateMasterMetadataResponse{}
-	mi := &file_master_proto_msgTypes[19]
+	mi := &file_master_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1046,7 +958,7 @@ func (x *UpdateMasterMetadataResponse) String() string {
 func (*UpdateMasterMetadataResponse) ProtoMessage() {}
 
 func (x *UpdateMasterMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_master_proto_msgTypes[19]
+	mi := &file_master_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1059,7 +971,7 @@ func (x *UpdateMasterMetadataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMasterMetadataResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMasterMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_master_proto_rawDescGZIP(), []int{19}
+	return file_master_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdateMasterMetadataResponse) GetStatus() *Status {
@@ -1067,6 +979,126 @@ func (x *UpdateMasterMetadataResponse) GetStatus() *Status {
 		return x.Status
 	}
 	return nil
+}
+
+type TruncateFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Size          uint64                 `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TruncateFileRequest) Reset() {
+	*x = TruncateFileRequest{}
+	mi := &file_master_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TruncateFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TruncateFileRequest) ProtoMessage() {}
+
+func (x *TruncateFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TruncateFileRequest.ProtoReflect.Descriptor instead.
+func (*TruncateFileRequest) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *TruncateFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *TruncateFileRequest) GetSize() uint64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+type TruncateFileResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Status            *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	DeleteChunks      []*ChunkLocation       `protobuf:"bytes,2,rep,name=delete_chunks,json=deleteChunks,proto3" json:"delete_chunks,omitempty"`
+	TruncateChunk     *ChunkLocation         `protobuf:"bytes,3,opt,name=truncate_chunk,json=truncateChunk,proto3" json:"truncate_chunk,omitempty"`
+	TruncateChunkSize uint64                 `protobuf:"varint,4,opt,name=truncate_chunk_size,json=truncateChunkSize,proto3" json:"truncate_chunk_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *TruncateFileResponse) Reset() {
+	*x = TruncateFileResponse{}
+	mi := &file_master_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TruncateFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TruncateFileResponse) ProtoMessage() {}
+
+func (x *TruncateFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TruncateFileResponse.ProtoReflect.Descriptor instead.
+func (*TruncateFileResponse) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *TruncateFileResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+func (x *TruncateFileResponse) GetDeleteChunks() []*ChunkLocation {
+	if x != nil {
+		return x.DeleteChunks
+	}
+	return nil
+}
+
+func (x *TruncateFileResponse) GetTruncateChunk() *ChunkLocation {
+	if x != nil {
+		return x.TruncateChunk
+	}
+	return nil
+}
+
+func (x *TruncateFileResponse) GetTruncateChunkSize() uint64 {
+	if x != nil {
+		return x.TruncateChunkSize
+	}
+	return 0
 }
 
 var File_master_proto protoreflect.FileDescriptor
@@ -1093,18 +1125,13 @@ const file_master_proto_rawDesc = "" +
 	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\"p\n" +
 	"\x19GetChunkLocationsResponse\x12#\n" +
 	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\x12.\n" +
-	"\blocation\x18\x02 \x01(\v2\x12.gfs.ChunkLocationR\blocation\"*\n" +
+	"\blocation\x18\x02 \x01(\v2\x12.gfs.ChunkLocationR\blocation\"@\n" +
 	"\x14AllocateChunkRequest\x12\x12\n" +
-	"\x04path\x18\x01 \x01(\tR\x04path\"l\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x14\n" +
+	"\x05index\x18\x02 \x01(\x04R\x05index\"l\n" +
 	"\x15AllocateChunkResponse\x12#\n" +
 	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\x12.\n" +
-	"\blocation\x18\x02 \x01(\v2\x12.gfs.ChunkLocationR\blocation\"\x83\x01\n" +
-	"\x1aUpdateChunkMetadataRequest\x12(\n" +
-	"\x06handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\x06handle\x12#\n" +
-	"\rbytes_written\x18\x02 \x01(\x04R\fbytesWritten\x12\x16\n" +
-	"\x06offset\x18\x03 \x01(\x04R\x06offset\"B\n" +
-	"\x1bUpdateChunkMetadataResponse\x12#\n" +
-	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"V\n" +
+	"\blocation\x18\x02 \x01(\v2\x12.gfs.ChunkLocationR\blocation\"V\n" +
 	"\x10WriteFileRequest\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06offset\x18\x02 \x01(\x04R\x06offset\x12\x16\n" +
@@ -1130,13 +1157,22 @@ const file_master_proto_rawDesc = "" +
 	"\vafter_range\x18\x04 \x03(\v2\x12.gfs.ChunkLocationR\n" +
 	"afterRange\x12,\n" +
 	"\x12start_offset_range\x18\x05 \x01(\x04R\x10startOffsetRange\x12(\n" +
-	"\x10end_offset_range\x18\x06 \x01(\x04R\x0eendOffsetRange\"v\n" +
+	"\x10end_offset_range\x18\x06 \x01(\x04R\x0eendOffsetRange\"\x85\x01\n" +
 	"\x1bUpdateMasterMetadataRequest\x12\x12\n" +
-	"\x04path\x18\x01 \x01(\tR\x04path\x12\x19\n" +
-	"\bnew_size\x18\x02 \x01(\x04R\anewSize\x12(\n" +
-	"\x06chunks\x18\x03 \x03(\v2\x10.gfs.ChunkHandleR\x06chunks\"C\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
+	"\x04size\x18\x02 \x01(\x04R\x04size\x12&\n" +
+	"\x05chunk\x18\x03 \x01(\v2\x10.gfs.ChunkHandleR\x05chunk\x12\x16\n" +
+	"\x06delete\x18\x04 \x01(\x04R\x06delete\"C\n" +
 	"\x1cUpdateMasterMetadataResponse\x12#\n" +
-	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status2\xe2\x05\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"=\n" +
+	"\x13TruncateFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
+	"\x04size\x18\x02 \x01(\x04R\x04size\"\xdf\x01\n" +
+	"\x14TruncateFileResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\x127\n" +
+	"\rdelete_chunks\x18\x02 \x03(\v2\x12.gfs.ChunkLocationR\fdeleteChunks\x129\n" +
+	"\x0etruncate_chunk\x18\x03 \x01(\v2\x12.gfs.ChunkLocationR\rtruncateChunk\x12.\n" +
+	"\x13truncate_chunk_size\x18\x04 \x01(\x04R\x11truncateChunkSize2\xcd\x05\n" +
 	"\rMasterService\x12=\n" +
 	"\n" +
 	"CreateFile\x12\x16.gfs.CreateFileRequest\x1a\x17.gfs.CreateFileResponse\x127\n" +
@@ -1144,13 +1180,13 @@ const file_master_proto_rawDesc = "" +
 	"\n" +
 	"DeleteFile\x12\x16.gfs.DeleteFileRequest\x1a\x17.gfs.DeleteFileResponse\x12R\n" +
 	"\x11GetChunkLocations\x12\x1d.gfs.GetChunkLocationsRequest\x1a\x1e.gfs.GetChunkLocationsResponse\x12F\n" +
-	"\rAllocateChunk\x12\x19.gfs.AllocateChunkRequest\x1a\x1a.gfs.AllocateChunkResponse\x12X\n" +
-	"\x13UpdateChunkMetadata\x12\x1f.gfs.UpdateChunkMetadataRequest\x1a .gfs.UpdateChunkMetadataResponse\x12:\n" +
+	"\rAllocateChunk\x12\x19.gfs.AllocateChunkRequest\x1a\x1a.gfs.AllocateChunkResponse\x12:\n" +
 	"\tWriteFile\x12\x15.gfs.WriteFileRequest\x1a\x16.gfs.WriteFileResponse\x12=\n" +
 	"\n" +
 	"AppendFile\x12\x16.gfs.AppendFileRequest\x1a\x17.gfs.AppendFileResponse\x12L\n" +
 	"\x0fRangeDeleteFile\x12\x1b.gfs.RangeDeleteFileRequest\x1a\x1c.gfs.RangeDeleteFileResponse\x12[\n" +
-	"\x14UpdateMasterMetadata\x12 .gfs.UpdateMasterMetadataRequest\x1a!.gfs.UpdateMasterMetadataResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
+	"\x14UpdateMasterMetadata\x12 .gfs.UpdateMasterMetadataRequest\x1a!.gfs.UpdateMasterMetadataResponse\x12C\n" +
+	"\fTruncateFile\x12\x18.gfs.TruncateFileRequest\x1a\x19.gfs.TruncateFileResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
 
 var (
 	file_master_proto_rawDescOnce sync.Once
@@ -1176,16 +1212,16 @@ var file_master_proto_goTypes = []any{
 	(*GetChunkLocationsResponse)(nil),    // 7: gfs.GetChunkLocationsResponse
 	(*AllocateChunkRequest)(nil),         // 8: gfs.AllocateChunkRequest
 	(*AllocateChunkResponse)(nil),        // 9: gfs.AllocateChunkResponse
-	(*UpdateChunkMetadataRequest)(nil),   // 10: gfs.UpdateChunkMetadataRequest
-	(*UpdateChunkMetadataResponse)(nil),  // 11: gfs.UpdateChunkMetadataResponse
-	(*WriteFileRequest)(nil),             // 12: gfs.WriteFileRequest
-	(*WriteFileResponse)(nil),            // 13: gfs.WriteFileResponse
-	(*AppendFileRequest)(nil),            // 14: gfs.AppendFileRequest
-	(*AppendFileResponse)(nil),           // 15: gfs.AppendFileResponse
-	(*RangeDeleteFileRequest)(nil),       // 16: gfs.RangeDeleteFileRequest
-	(*RangeDeleteFileResponse)(nil),      // 17: gfs.RangeDeleteFileResponse
-	(*UpdateMasterMetadataRequest)(nil),  // 18: gfs.UpdateMasterMetadataRequest
-	(*UpdateMasterMetadataResponse)(nil), // 19: gfs.UpdateMasterMetadataResponse
+	(*WriteFileRequest)(nil),             // 10: gfs.WriteFileRequest
+	(*WriteFileResponse)(nil),            // 11: gfs.WriteFileResponse
+	(*AppendFileRequest)(nil),            // 12: gfs.AppendFileRequest
+	(*AppendFileResponse)(nil),           // 13: gfs.AppendFileResponse
+	(*RangeDeleteFileRequest)(nil),       // 14: gfs.RangeDeleteFileRequest
+	(*RangeDeleteFileResponse)(nil),      // 15: gfs.RangeDeleteFileResponse
+	(*UpdateMasterMetadataRequest)(nil),  // 16: gfs.UpdateMasterMetadataRequest
+	(*UpdateMasterMetadataResponse)(nil), // 17: gfs.UpdateMasterMetadataResponse
+	(*TruncateFileRequest)(nil),          // 18: gfs.TruncateFileRequest
+	(*TruncateFileResponse)(nil),         // 19: gfs.TruncateFileResponse
 	(*Status)(nil),                       // 20: gfs.Status
 	(*ChunkHandle)(nil),                  // 21: gfs.ChunkHandle
 	(*ChunkLocation)(nil),                // 22: gfs.ChunkLocation
@@ -1200,43 +1236,44 @@ var file_master_proto_depIdxs = []int32{
 	22, // 6: gfs.GetChunkLocationsResponse.location:type_name -> gfs.ChunkLocation
 	20, // 7: gfs.AllocateChunkResponse.status:type_name -> gfs.Status
 	22, // 8: gfs.AllocateChunkResponse.location:type_name -> gfs.ChunkLocation
-	21, // 9: gfs.UpdateChunkMetadataRequest.handle:type_name -> gfs.ChunkHandle
-	20, // 10: gfs.UpdateChunkMetadataResponse.status:type_name -> gfs.Status
-	20, // 11: gfs.WriteFileResponse.status:type_name -> gfs.Status
-	22, // 12: gfs.WriteFileResponse.locations:type_name -> gfs.ChunkLocation
-	20, // 13: gfs.AppendFileResponse.status:type_name -> gfs.Status
-	22, // 14: gfs.AppendFileResponse.locations:type_name -> gfs.ChunkLocation
-	20, // 15: gfs.RangeDeleteFileResponse.status:type_name -> gfs.Status
-	22, // 16: gfs.RangeDeleteFileResponse.before_range:type_name -> gfs.ChunkLocation
-	22, // 17: gfs.RangeDeleteFileResponse.range:type_name -> gfs.ChunkLocation
-	22, // 18: gfs.RangeDeleteFileResponse.after_range:type_name -> gfs.ChunkLocation
-	21, // 19: gfs.UpdateMasterMetadataRequest.chunks:type_name -> gfs.ChunkHandle
-	20, // 20: gfs.UpdateMasterMetadataResponse.status:type_name -> gfs.Status
-	0,  // 21: gfs.MasterService.CreateFile:input_type -> gfs.CreateFileRequest
-	2,  // 22: gfs.MasterService.OpenFile:input_type -> gfs.OpenFileRequest
-	4,  // 23: gfs.MasterService.DeleteFile:input_type -> gfs.DeleteFileRequest
-	6,  // 24: gfs.MasterService.GetChunkLocations:input_type -> gfs.GetChunkLocationsRequest
-	8,  // 25: gfs.MasterService.AllocateChunk:input_type -> gfs.AllocateChunkRequest
-	10, // 26: gfs.MasterService.UpdateChunkMetadata:input_type -> gfs.UpdateChunkMetadataRequest
-	12, // 27: gfs.MasterService.WriteFile:input_type -> gfs.WriteFileRequest
-	14, // 28: gfs.MasterService.AppendFile:input_type -> gfs.AppendFileRequest
-	16, // 29: gfs.MasterService.RangeDeleteFile:input_type -> gfs.RangeDeleteFileRequest
-	18, // 30: gfs.MasterService.UpdateMasterMetadata:input_type -> gfs.UpdateMasterMetadataRequest
-	1,  // 31: gfs.MasterService.CreateFile:output_type -> gfs.CreateFileResponse
-	3,  // 32: gfs.MasterService.OpenFile:output_type -> gfs.OpenFileResponse
-	5,  // 33: gfs.MasterService.DeleteFile:output_type -> gfs.DeleteFileResponse
-	7,  // 34: gfs.MasterService.GetChunkLocations:output_type -> gfs.GetChunkLocationsResponse
-	9,  // 35: gfs.MasterService.AllocateChunk:output_type -> gfs.AllocateChunkResponse
-	11, // 36: gfs.MasterService.UpdateChunkMetadata:output_type -> gfs.UpdateChunkMetadataResponse
-	13, // 37: gfs.MasterService.WriteFile:output_type -> gfs.WriteFileResponse
-	15, // 38: gfs.MasterService.AppendFile:output_type -> gfs.AppendFileResponse
-	17, // 39: gfs.MasterService.RangeDeleteFile:output_type -> gfs.RangeDeleteFileResponse
-	19, // 40: gfs.MasterService.UpdateMasterMetadata:output_type -> gfs.UpdateMasterMetadataResponse
-	31, // [31:41] is the sub-list for method output_type
-	21, // [21:31] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	20, // 9: gfs.WriteFileResponse.status:type_name -> gfs.Status
+	22, // 10: gfs.WriteFileResponse.locations:type_name -> gfs.ChunkLocation
+	20, // 11: gfs.AppendFileResponse.status:type_name -> gfs.Status
+	22, // 12: gfs.AppendFileResponse.locations:type_name -> gfs.ChunkLocation
+	20, // 13: gfs.RangeDeleteFileResponse.status:type_name -> gfs.Status
+	22, // 14: gfs.RangeDeleteFileResponse.before_range:type_name -> gfs.ChunkLocation
+	22, // 15: gfs.RangeDeleteFileResponse.range:type_name -> gfs.ChunkLocation
+	22, // 16: gfs.RangeDeleteFileResponse.after_range:type_name -> gfs.ChunkLocation
+	21, // 17: gfs.UpdateMasterMetadataRequest.chunk:type_name -> gfs.ChunkHandle
+	20, // 18: gfs.UpdateMasterMetadataResponse.status:type_name -> gfs.Status
+	20, // 19: gfs.TruncateFileResponse.status:type_name -> gfs.Status
+	22, // 20: gfs.TruncateFileResponse.delete_chunks:type_name -> gfs.ChunkLocation
+	22, // 21: gfs.TruncateFileResponse.truncate_chunk:type_name -> gfs.ChunkLocation
+	0,  // 22: gfs.MasterService.CreateFile:input_type -> gfs.CreateFileRequest
+	2,  // 23: gfs.MasterService.OpenFile:input_type -> gfs.OpenFileRequest
+	4,  // 24: gfs.MasterService.DeleteFile:input_type -> gfs.DeleteFileRequest
+	6,  // 25: gfs.MasterService.GetChunkLocations:input_type -> gfs.GetChunkLocationsRequest
+	8,  // 26: gfs.MasterService.AllocateChunk:input_type -> gfs.AllocateChunkRequest
+	10, // 27: gfs.MasterService.WriteFile:input_type -> gfs.WriteFileRequest
+	12, // 28: gfs.MasterService.AppendFile:input_type -> gfs.AppendFileRequest
+	14, // 29: gfs.MasterService.RangeDeleteFile:input_type -> gfs.RangeDeleteFileRequest
+	16, // 30: gfs.MasterService.UpdateMasterMetadata:input_type -> gfs.UpdateMasterMetadataRequest
+	18, // 31: gfs.MasterService.TruncateFile:input_type -> gfs.TruncateFileRequest
+	1,  // 32: gfs.MasterService.CreateFile:output_type -> gfs.CreateFileResponse
+	3,  // 33: gfs.MasterService.OpenFile:output_type -> gfs.OpenFileResponse
+	5,  // 34: gfs.MasterService.DeleteFile:output_type -> gfs.DeleteFileResponse
+	7,  // 35: gfs.MasterService.GetChunkLocations:output_type -> gfs.GetChunkLocationsResponse
+	9,  // 36: gfs.MasterService.AllocateChunk:output_type -> gfs.AllocateChunkResponse
+	11, // 37: gfs.MasterService.WriteFile:output_type -> gfs.WriteFileResponse
+	13, // 38: gfs.MasterService.AppendFile:output_type -> gfs.AppendFileResponse
+	15, // 39: gfs.MasterService.RangeDeleteFile:output_type -> gfs.RangeDeleteFileResponse
+	17, // 40: gfs.MasterService.UpdateMasterMetadata:output_type -> gfs.UpdateMasterMetadataResponse
+	19, // 41: gfs.MasterService.TruncateFile:output_type -> gfs.TruncateFileResponse
+	32, // [32:42] is the sub-list for method output_type
+	22, // [22:32] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_master_proto_init() }

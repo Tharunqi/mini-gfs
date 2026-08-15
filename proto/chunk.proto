@@ -60,21 +60,12 @@ message HeartbeatResponse {
     Status status = 1;
 }
 
-message RangeDeleteChunkRequest {
-    string path = 1;
-
-    uint64 offset = 2;
-    uint64 length = 3;
-
-    repeated ChunkLocation before_range = 4;
-    repeated ChunkLocation range = 5;
-    repeated ChunkLocation after_range = 6;
-
-    uint64 start_offset_range = 7;
-    uint64 end_offset_range = 8;
+message TruncateChunkRequest{
+    ChunkHandle chunk_handle = 1;
+    uint64 size = 2;
 }
 
-message RangeDeleteChunkResponse {
+message TruncateChunkResponse{
     Status status = 1;
 }
 
@@ -92,5 +83,5 @@ service ChunkService {
     rpc Heartbeat(HeartbeatRequest)
         returns (HeartbeatResponse);
 
-    rpc RangeDeleteChunk(RangeDeleteChunkRequest) returns (RangeDeleteChunkResponse);
+    rpc TruncateChunk(TruncateChunkRequest) returns (TruncateChunkResponse);
 }

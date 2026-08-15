@@ -43,21 +43,12 @@ message GetChunkLocationsResponse {
 
 message AllocateChunkRequest {
     string path = 1;
+    uint64 index = 2;
 }
 
 message AllocateChunkResponse {
     Status status = 1;
     ChunkLocation location = 2;
-}
-
-message UpdateChunkMetadataRequest {
-    ChunkHandle handle = 1;
-    uint64 bytes_written = 2;
-    uint64 offset = 3;
-}
-
-message UpdateChunkMetadataResponse {
-    Status status = 1;
 }
 
 message WriteFileRequest{
@@ -99,12 +90,25 @@ message RangeDeleteFileResponse{
 
 message UpdateMasterMetadataRequest {
     string path = 1;
-    uint64 new_size = 2;
-    repeated ChunkHandle chunks = 3;
+    uint64 size = 2;
+    ChunkHandle chunk = 3;
+    uint64 delete = 4;
 }
 
 message UpdateMasterMetadataResponse {
     Status status = 1;
+}
+
+message TruncateFileRequest{
+    string path = 1;
+    uint64 size = 2;
+}
+
+message TruncateFileResponse{
+    Status status = 1;
+    repeated ChunkLocation delete_chunks = 2;
+    ChunkLocation truncate_chunk = 3;
+    uint64 truncate_chunk_size = 4;
 }
 
 service MasterService {
@@ -118,14 +122,13 @@ service MasterService {
 
     rpc AllocateChunk(AllocateChunkRequest) returns (AllocateChunkResponse);
 
-    rpc UpdateChunkMetadata(UpdateChunkMetadataRequest) returns (UpdateChunkMetadataResponse);
-
     rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
 
     rpc AppendFile(AppendFileRequest) returns (AppendFileResponse);
 
     rpc RangeDeleteFile(RangeDeleteFileRequest) returns (RangeDeleteFileResponse);
 
-    rpc UpdateMasterMetadata(UpdateMasterMetadataRequest)
-    returns (UpdateMasterMetadataResponse);
+    rpc UpdateMasterMetadata(UpdateMasterMetadataRequest) returns (UpdateMasterMetadataResponse);
+
+    rpc TruncateFile(TruncateFileRequest) returns (TruncateFileResponse);
 }

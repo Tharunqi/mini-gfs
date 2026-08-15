@@ -205,7 +205,7 @@ func (m *MasterServer) AllocateChunk(
 	ctx context.Context,
 	req *pb.AllocateChunkRequest,
 ) (*pb.AllocateChunkResponse, error) {
-	chunkHandle, err := m.metadata.AllocateChunk(req.Path)
+	chunkHandle, err := m.metadata.AllocateChunk(req.Path, req.Index)
 	if err != nil {
 		return &pb.AllocateChunkResponse{
 			Status: &pb.Status{
@@ -230,38 +230,6 @@ func (m *MasterServer) AllocateChunk(
 				Host: "localhost",
 				Port: 50052,
 			},
-		},
-	}, nil
-}
-
-func (m *MasterServer) UpdateChunkMetadata(
-	ctx context.Context,
-	req *pb.UpdateChunkMetadataRequest,
-) (*pb.UpdateChunkMetadataResponse, error) {
-	handle := ChunkHandle{
-		Id:   req.Handle.Id,
-		path: req.Handle.Path,
-	}
-
-	err := m.metadata.UpdateChunkMetadata(
-		handle,
-		req.Offset,
-		req.BytesWritten,
-	)
-
-	if err != nil {
-		return &pb.UpdateChunkMetadataResponse{
-			Status: &pb.Status{
-				Success: false,
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
-	return &pb.UpdateChunkMetadataResponse{
-		Status: &pb.Status{
-			Success: true,
-			Message: "metadata updated successfully",
 		},
 	}, nil
 }
@@ -599,36 +567,13 @@ func (m *MasterServer) UpdateMasterMetadata(
 	req *pb.UpdateMasterMetadataRequest,
 ) (*pb.UpdateMasterMetadataResponse, error) {
 
-	chunkIDs := make([]uint64, 0, len(req.Chunks))
-
-	for _, chunk := range req.Chunks {
-		if chunk == nil {
-			continue
-		}
-
-		chunkIDs = append(
-			chunkIDs,
-			chunk.Id,
-		)
+	isDelete := req.Delete
+	handle := ChunkHandle{
+		Id:   req.Chunk.Id,
+		path: req.Chunk.Path,
 	}
-
-	err := m.metadata.UpdateMasterMetadata(
-		req.Path,
-		req.NewSize,
-		chunkIDs,
-	)
-
+	err := m.metadata.UpdateMasterMetadata(req.Path, req.Size, handle, isDelete)
 	if err != nil {
-
-		if errors.Is(err, ErrFileNotFound) {
-			return &pb.UpdateMasterMetadataResponse{
-				Status: &pb.Status{
-					Success: false,
-					Message: "file not found",
-				},
-			}, nil
-		}
-
 		return &pb.UpdateMasterMetadataResponse{
 			Status: &pb.Status{
 				Success: false,
@@ -637,17 +582,125 @@ func (m *MasterServer) UpdateMasterMetadata(
 		}, nil
 	}
 
-	fmt.Printf(
-		"[Master] metadata updated: path=%s size=%d chunks=%v\n",
-		req.Path,
-		req.NewSize,
-		chunkIDs,
-	)
-
 	return &pb.UpdateMasterMetadataResponse{
 		Status: &pb.Status{
 			Success: true,
-			Message: "master metadata updated successfully",
+			Message: "chunk updated successfully",
 		},
+	}, nil
+}
+func (m *MasterServer) TruncateFile(
+	ctx context.Context,
+	req *pb.TruncateFileRequest,
+) (*pb.TruncateFileResponse, error) {
+
+	deleteIDs, truncateID, truncateSize, err :=
+		m.metadata.TruncateFile(
+			req.Path,
+			req.Size,
+		)
+
+	if err != nil {
+		return &pb.TruncateFileResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	deleteLocations :=
+		make([]*pb.ChunkLocation, 0, len(deleteIDs))
+
+	// Get locations of chunks that need to be deleted.
+	for _, id := range deleteIDs {
+
+		resp, err := m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   id,
+					Path: req.Path,
+				},
+			},
+		)
+
+		if err != nil {
+			return &pb.TruncateFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
+
+		if resp.Status == nil ||
+			!resp.Status.Success ||
+			resp.Location == nil {
+
+			return &pb.TruncateFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "failed to get delete chunk location",
+				},
+			}, nil
+		}
+
+		deleteLocations = append(
+			deleteLocations,
+			resp.Location,
+		)
+	}
+
+	// ------------------------------------------------------------
+	// Get location of final chunk that needs truncation.
+	// ------------------------------------------------------------
+
+	var truncateLocation *pb.ChunkLocation
+
+	if truncateID != 0 {
+
+		resp, err := m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   truncateID,
+					Path: req.Path,
+				},
+			},
+		)
+
+		if err != nil {
+			return &pb.TruncateFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
+
+		if resp.Status == nil ||
+			!resp.Status.Success ||
+			resp.Location == nil {
+
+			return &pb.TruncateFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "failed to get truncate chunk location",
+				},
+			}, nil
+		}
+
+		truncateLocation = resp.Location
+	}
+
+	return &pb.TruncateFileResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "truncate plan created successfully",
+		},
+		DeleteChunks:      deleteLocations,
+		TruncateChunk:     truncateLocation,
+		TruncateChunkSize: truncateSize,
 	}, nil
 }

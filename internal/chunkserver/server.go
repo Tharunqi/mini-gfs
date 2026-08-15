@@ -3,7 +3,6 @@ package chunkserver
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	pb "github.com/Tharunqi/mini-gfs/internal/pb"
 )
@@ -63,12 +62,13 @@ func (c *ChunkServer) WriteChunk(
 	}
 
 	if c.masterClient != nil {
-		_, err = c.masterClient.UpdateChunkMetadata(
+		_, err = c.masterClient.UpdateMasterMetadata(
 			ctx,
-			&pb.UpdateChunkMetadataRequest{
-				Handle:       req.ChunkHandle,
-				Offset:       req.Offset,
-				BytesWritten: uint64(len(req.Data)),
+			&pb.UpdateMasterMetadataRequest{
+				Path:   req.ChunkHandle.Path,
+				Size:   uint64(len(req.Data)),
+				Chunk:  req.ChunkHandle,
+				Delete: 2,
 			},
 		)
 
@@ -169,6 +169,8 @@ func (c *ChunkServer) DeleteChunk(
 		path: req.ChunkHandle.Path,
 	}
 
+	deleted_size := c.storage.GetChunkSize(handle)
+
 	err := c.storage.DeleteChunk(handle)
 
 	if err != nil {
@@ -189,6 +191,25 @@ func (c *ChunkServer) DeleteChunk(
 		}, nil
 	}
 
+	_, err = c.masterClient.UpdateMasterMetadata(
+		ctx,
+		&pb.UpdateMasterMetadataRequest{
+			Path:   req.ChunkHandle.Path,
+			Size:   deleted_size,
+			Chunk:  req.ChunkHandle,
+			Delete: 0,
+		},
+	)
+
+	if err != nil {
+		return &pb.DeleteChunkResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: "failed to update master metadata",
+			},
+		}, nil
+	}
+
 	return &pb.DeleteChunkResponse{
 		Status: &pb.Status{
 			Success: true,
@@ -197,152 +218,71 @@ func (c *ChunkServer) DeleteChunk(
 	}, nil
 }
 
-// ============================================================
-// TRUNCATE = RANGE DELETE
-// ============================================================
-
-func (c *ChunkServer) RangeDeleteChunk(
+func (c *ChunkServer) TruncateChunk(
 	ctx context.Context,
-	req *pb.RangeDeleteChunkRequest,
-) (*pb.RangeDeleteChunkResponse, error) {
+	req *pb.TruncateChunkRequest,
+) (*pb.TruncateChunkResponse, error) {
 
-	if req == nil {
-		return &pb.RangeDeleteChunkResponse{
+	if req.ChunkHandle == nil {
+		return &pb.TruncateChunkResponse{
 			Status: &pb.Status{
 				Success: false,
-				Message: "request is nil",
+				Message: "chunk handle is required",
 			},
 		}, nil
 	}
 
-	if req.Length == 0 {
-		return &pb.RangeDeleteChunkResponse{
-			Status: &pb.Status{
-				Success: true,
-				Message: "nothing to delete",
-			},
-		}, nil
+	handle := ChunkHandle{
+		Id:   req.ChunkHandle.Id,
+		path: req.ChunkHandle.Path,
 	}
 
-	// --------------------------------------------------------
-	// Build the complete ordered list of handles.
-	//
-	// BeforeRange is NOT rewritten.
-	// But we need its handles to calculate the absolute
-	// index of the affected region.
-	// --------------------------------------------------------
+	//Error handling have to do
+	deleted_size := c.storage.GetChunkSize(handle) - req.Size
 
-	allLocations := make(
-		[]*pb.ChunkLocation,
-		0,
-		len(req.BeforeRange)+
-			len(req.Range)+
-			len(req.AfterRange),
-	)
-
-	allLocations = append(
-		allLocations,
-		req.BeforeRange...,
-	)
-
-	allLocations = append(
-		allLocations,
-		req.Range...,
-	)
-
-	allLocations = append(
-		allLocations,
-		req.AfterRange...,
-	)
-
-	handles := make(
-		[]ChunkHandle,
-		0,
-		len(allLocations),
-	)
-
-	for _, location := range allLocations {
-
-		if location == nil ||
-			location.Handle == nil {
-			continue
-		}
-
-		handles = append(
-			handles,
-			ChunkHandle{
-				Id:   location.Handle.Id,
-				path: location.Handle.Path,
-			},
-		)
-	}
-
-	if len(handles) == 0 {
-		return &pb.RangeDeleteChunkResponse{
-			Status: &pb.Status{
-				Success: false,
-				Message: "no chunks supplied",
-			},
-		}, nil
-	}
-
-	fmt.Printf(
-		"[ChunkServer] range delete: path=%s offset=%d length=%d\n",
-		req.Path,
-		req.Offset,
-		req.Length,
-	)
-	survivingChunks, newSize, err :=
-		c.storage.RangeDeleteChunk(
-			handles,
-			req.Offset,
-			req.Length,
-		)
+	err := c.storage.TruncateChunk(handle, req.Size)
 
 	if err != nil {
-		return &pb.RangeDeleteChunkResponse{
+		if errors.Is(err, ErrChunkNotFound) {
+			return &pb.TruncateChunkResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: "chunk not found",
+				},
+			}, nil
+		}
+
+		return &pb.TruncateChunkResponse{
 			Status: &pb.Status{
 				Success: false,
 				Message: err.Error(),
 			},
 		}, nil
 	}
-	chunkHandles := make(
-		[]*pb.ChunkHandle,
-		0,
-		len(survivingChunks),
-	)
 
-	for _, id := range survivingChunks {
-		chunkHandles = append(
-			chunkHandles,
-			&pb.ChunkHandle{
-				Id:   id,
-				Path: req.Path,
-			},
-		)
-	}
 	_, err = c.masterClient.UpdateMasterMetadata(
 		ctx,
 		&pb.UpdateMasterMetadataRequest{
-			Path:    req.Path,
-			NewSize: newSize,
-			Chunks:  chunkHandles,
+			Path:   req.ChunkHandle.Path,
+			Size:   deleted_size,
+			Chunk:  req.ChunkHandle,
+			Delete: 1,
 		},
 	)
 
 	if err != nil {
-		return &pb.RangeDeleteChunkResponse{
+		return &pb.TruncateChunkResponse{
 			Status: &pb.Status{
 				Success: false,
-				Message: "range deletion succeeded but failed to update master metadata",
+				Message: "failed to update master metadata",
 			},
 		}, nil
 	}
-	return &pb.RangeDeleteChunkResponse{
+
+	return &pb.TruncateChunkResponse{
 		Status: &pb.Status{
 			Success: true,
-			Message: "range deletion and metadata update successful",
+			Message: "chunk truncated successfully",
 		},
 	}, nil
 }
