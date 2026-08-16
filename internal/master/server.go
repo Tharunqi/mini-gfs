@@ -3,7 +3,6 @@ package master
 import (
 	"context"
 	"errors"
-
 	"fmt"
 	"net"
 	"strconv"
@@ -17,9 +16,9 @@ type MasterServer struct {
 	metadata *MetadataStore
 }
 
-func NewMasterServer() *MasterServer {
+func NewMasterServer(metadata *MetadataStore) *MasterServer {
 	return &MasterServer{
-		metadata: NewMetadataStore(),
+		metadata: metadata,
 	}
 }
 

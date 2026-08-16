@@ -1,0 +1,14 @@
+{
+  "files": {
+    "persistent_test.txt": {
+      "Path": "persistent_test.txt",
+      "SizeBytes": 21,
+      "ChunkHandles": [
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "chunk_id": 4
+}

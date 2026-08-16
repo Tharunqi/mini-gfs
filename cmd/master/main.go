@@ -3,37 +3,116 @@ package main
 import (
 	"log"
 	"net"
-
-	"google.golang.org/grpc"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Tharunqi/mini-gfs/internal/master"
 	pb "github.com/Tharunqi/mini-gfs/internal/pb"
+
+	"google.golang.org/grpc"
 )
 
 func main() {
 
-	// Listen on TCP port 50051
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+	// --------------------------------------------------
+	// 1. Create metadata store
+	// --------------------------------------------------
+
+	metadata := master.NewMetadataStore()
+
+	// --------------------------------------------------
+	// 2. Load metadata from disk
+	// --------------------------------------------------
+
+	if err := metadata.Load(); err != nil {
+		log.Fatalf(
+			"failed to load metadata: %v",
+			err,
+		)
 	}
 
-	// Create gRPC server
+	log.Println("Metadata loaded successfully")
+
+	// --------------------------------------------------
+	// 3. Create Master gRPC server
+	// --------------------------------------------------
+
+	masterServer := master.NewMasterServer(
+		metadata,
+	)
+
 	grpcServer := grpc.NewServer()
 
-	// Create our implementation
-	masterServer := master.NewMasterServer()
-
-	// Register it with gRPC
 	pb.RegisterMasterServiceServer(
 		grpcServer,
 		masterServer,
 	)
 
-	log.Println("Master Server listening on :50051")
+	// --------------------------------------------------
+	// 4. Start listening
+	// --------------------------------------------------
 
-	// Start serving
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	listener, err := net.Listen(
+		"tcp",
+		":50051",
+	)
+	if err != nil {
+		log.Fatalf(
+			"failed to listen on :50051: %v",
+			err,
+		)
 	}
+
+	log.Println("Master listening on :50051")
+
+	// --------------------------------------------------
+	// 5. Start gRPC server in background
+	// --------------------------------------------------
+
+	go func() {
+		if err := grpcServer.Serve(listener); err != nil {
+			log.Printf(
+				"gRPC server stopped: %v",
+				err,
+			)
+		}
+	}()
+
+	// --------------------------------------------------
+	// 6. Wait for shutdown signal
+	// --------------------------------------------------
+
+	stop := make(chan os.Signal, 1)
+
+	signal.Notify(
+		stop,
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+
+	<-stop
+
+	log.Println("Shutting down Master...")
+
+	// --------------------------------------------------
+	// 7. Stop accepting new RPCs
+	// --------------------------------------------------
+
+	grpcServer.GracefulStop()
+
+	// --------------------------------------------------
+	// 8. Save metadata to disk
+	// --------------------------------------------------
+
+	if err := metadata.Save(); err != nil {
+		log.Printf(
+			"failed to save metadata: %v",
+			err,
+		)
+	} else {
+		log.Println("Metadata saved successfully")
+	}
+
+	log.Println("Master stopped")
 }

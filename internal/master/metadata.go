@@ -1,8 +1,10 @@
 package master
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/Tharunqi/mini-gfs/internal/config"
@@ -25,16 +27,23 @@ type FileMetadata struct {
 	ChunkHandles []uint64
 }
 
+type persistentMetadata struct {
+	Files   map[string]*FileMetadata `json:"files"`
+	ChunkID uint64                   `json:"chunk_id"`
+}
+
 type MetadataStore struct {
-	mu      sync.RWMutex
-	files   map[string]*FileMetadata
-	chunkid uint64
+	mu       sync.RWMutex
+	files    map[string]*FileMetadata
+	chunkid  uint64
+	dataPath string
 }
 
 func NewMetadataStore() *MetadataStore {
 	return &MetadataStore{
-		files:   make(map[string]*FileMetadata),
-		chunkid: 1,
+		files:    make(map[string]*FileMetadata),
+		chunkid:  1,
+		dataPath: "metadata.json",
 	}
 }
 
@@ -414,4 +423,91 @@ func (m *MetadataStore) TruncateFile(
 	}
 
 	return deleteChunks, truncateChunk, truncateChunkSize, nil
+}
+
+func (m *MetadataStore) Save() error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	data := persistentMetadata{
+		Files:   m.files,
+		ChunkID: m.chunkid,
+	}
+
+	bytes, err := json.MarshalIndent(
+		data,
+		"",
+		"  ",
+	)
+	if err != nil {
+		return err
+	}
+
+	// Write to a temporary file first.
+	tmpPath := m.dataPath + ".tmp"
+
+	err = os.WriteFile(
+		tmpPath,
+		bytes,
+		0644,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Replace the old metadata file.
+	err = os.Rename(
+		tmpPath,
+		m.dataPath,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MetadataStore) Load() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	bytes, err := os.ReadFile(
+		m.dataPath,
+	)
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			// First startup.
+			// There is no metadata yet.
+			m.files = make(
+				map[string]*FileMetadata,
+			)
+			m.chunkid = 1
+
+			return nil
+		}
+
+		return err
+	}
+
+	var data persistentMetadata
+
+	err = json.Unmarshal(
+		bytes,
+		&data,
+	)
+	if err != nil {
+		return err
+	}
+
+	if data.Files == nil {
+		data.Files = make(
+			map[string]*FileMetadata,
+		)
+	}
+
+	m.files = data.Files
+	m.chunkid = data.ChunkID
+
+	return nil
 }
