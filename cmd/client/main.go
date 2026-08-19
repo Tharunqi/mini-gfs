@@ -3,224 +3,317 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"time"
 
-	pb "github.com/Tharunqi/mini-gfs/internal/pb"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-)
-
-const (
-	masterAddr = "localhost:50051"
-	filePath   = "persistent_test.txt"
+	"github.com/Tharunqi/mini-gfs/internal/client"
 )
 
 func main() {
 
-	// --------------------------------------------------
-	// Connect to Master
-	// --------------------------------------------------
-
-	conn, err := grpc.NewClient(
-		masterAddr,
-		grpc.WithTransportCredentials(
-			insecure.NewCredentials(),
-		),
-	)
-	if err != nil {
-		log.Fatalf(
-			"failed to connect to Master: %v",
-			err,
-		)
-	}
-	defer conn.Close()
-
-	client := pb.NewMasterServiceClient(conn)
-
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
-		10*time.Second,
+		30*time.Second,
 	)
 	defer cancel()
 
+	gfs, err := client.New("localhost:50051")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer gfs.Close()
+
 	fmt.Println("Connected to Master")
 
-	// --------------------------------------------------
-	// OPEN FILE
-	// --------------------------------------------------
+	// ========================================================
+	// TEST 1: INSERT INSIDE ONE CHUNK
+	// ========================================================
 
-	resp, err := client.OpenFile(
-		ctx,
-		&pb.OpenFileRequest{
-			Path: filePath,
-		},
-	)
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 1: INSERT INSIDE CHUNK")
+	fmt.Println("========================================")
 
+	path := "insert_test_1.txt"
+
+	err = gfs.Create(ctx, path)
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	initial := []byte("ABCDEFGHIJ")
+
+	err = gfs.Write(
+		ctx,
+		path,
+		0,
+		initial,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gfs.Insert(
+		ctx,
+		path,
+		5,
+		[]byte("XYZ"),
+	)
+	if err != nil {
+		log.Fatal("Insert:", err)
+	}
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		"ABCDEXYZFGHIJ",
+	)
+
+	fmt.Println("✅ TEST 1 PASSED")
+
+	// ========================================================
+	// TEST 2: INSERT AT BEGINNING
+	// ========================================================
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 2: INSERT AT BEGINNING")
+	fmt.Println("========================================")
+
+	path = "insert_test_2.txt"
+
+	err = gfs.Create(ctx, path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gfs.Write(
+		ctx,
+		path,
+		0,
+		[]byte("ABCDEFGHIJ"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gfs.Insert(
+		ctx,
+		path,
+		0,
+		[]byte("XYZ"),
+	)
+	if err != nil {
+		log.Fatal("Insert:", err)
+	}
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		"XYZABCDEFGHIJ",
+	)
+
+	fmt.Println("✅ TEST 2 PASSED")
+
+	// ========================================================
+	// TEST 3: INSERT AT EOF
+	// ========================================================
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 3: INSERT AT EOF")
+	fmt.Println("========================================")
+
+	path = "insert_test_3.txt"
+
+	err = gfs.Create(ctx, path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gfs.Write(
+		ctx,
+		path,
+		0,
+		[]byte("ABCDEFGHIJ"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gfs.Insert(
+		ctx,
+		path,
+		10,
+		[]byte("XYZ"),
+	)
+	if err != nil {
+		log.Fatal("Insert:", err)
+	}
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		"ABCDEFGHIJXYZ",
+	)
+
+	fmt.Println("✅ TEST 3 PASSED")
+
+	// ========================================================
+	// TEST 4: CROSS-CHUNK INSERT
+	// ========================================================
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 4: CROSS-CHUNK INSERT")
+	fmt.Println("========================================")
+
+	path = "insert_test_4.txt"
+
+	err = gfs.Create(ctx, path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	initial = []byte(
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+	)
+
+	err = gfs.Write(
+		ctx,
+		path,
+		0,
+		initial,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Insert in the middle of chunk 0.
+	err = gfs.Insert(
+		ctx,
+		path,
+		7,
+		[]byte("XYZ"),
+	)
+	if err != nil {
+		log.Fatal("Insert:", err)
+	}
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		"ABCDEFGXYZHIJKLMNOPQRSTUVWXYZ0123456789",
+	)
+
+	fmt.Println("✅ TEST 4 PASSED")
+
+	// ========================================================
+	// TEST 5: INSERT LARGER THAN ONE CHUNK
+	// ========================================================
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 5: LARGE INSERT")
+	fmt.Println("========================================")
+
+	path = "insert_test_5.txt"
+
+	err = gfs.Create(ctx, path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gfs.Write(
+		ctx,
+		path,
+		0,
+		[]byte("ABCDEFGHIJ"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = gfs.Insert(
+		ctx,
+		path,
+		5,
+		[]byte("1234567890ABCDE"),
+	)
+	if err != nil {
+		log.Fatal("Insert:", err)
+	}
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		"ABCDE1234567890ABCDEFGHIJ",
+	)
+
+	fmt.Println("✅ TEST 5 PASSED")
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("ALL INSERT TESTS PASSED")
+	fmt.Println("========================================")
+}
+
+func verify(
+	ctx context.Context,
+	gfs *client.Client,
+	path string,
+	expected string,
+) {
+
+	data, err := gfs.Read(ctx, path)
+	if err != nil {
+		log.Fatal("Read:", err)
+	}
+
+	actual := string(data)
+
+	fmt.Println()
+	fmt.Println("Expected:")
+	fmt.Printf("%q\n", expected)
+
+	fmt.Println("Actual:")
+	fmt.Printf("%q\n", actual)
+
+	if actual != expected {
 		log.Fatalf(
-			"OpenFile RPC failed: %v",
-			err,
+			"❌ DATA MISMATCH: expected %q, got %q",
+			expected,
+			actual,
 		)
 	}
 
-	if resp.Status == nil ||
-		!resp.Status.Success {
-
-		log.Fatalf(
-			"OpenFile failed: %s",
-			resp.Status.Message,
-		)
+	info, err := gfs.Open(ctx, path)
+	if err != nil {
+		log.Fatal("Open:", err)
 	}
 
-	fmt.Println("\n========== MASTER METADATA ==========")
-	fmt.Println("Path:", filePath)
-	fmt.Println("Size:", resp.SizeBytes)
-	fmt.Println("Chunks:", len(resp.Chunks))
-
-	// --------------------------------------------------
-	// READ EACH CHUNK
-	// --------------------------------------------------
-
-	var result []byte
-
-	for i, handle := range resp.Chunks {
-
-		fmt.Printf(
-			"\nReading chunk[%d] ID=%d\n",
-			i,
-			handle.Id,
-		)
-
-		// Ask Master where the chunk lives.
-		locationResp, err :=
-			client.GetChunkLocations(
-				ctx,
-				&pb.GetChunkLocationsRequest{
-					ChunkHandle: handle,
-				},
-			)
-
-		if err != nil {
-			log.Fatalf(
-				"GetChunkLocations failed: %v",
-				err,
-			)
-		}
-
-		if locationResp.Status == nil ||
-			!locationResp.Status.Success {
-
-			log.Fatalf(
-				"GetChunkLocations failed: %s",
-				locationResp.Status.Message,
-			)
-		}
-
-		location := locationResp.Location
-
-		if location == nil ||
-			location.Primary == nil {
-
-			log.Fatal(
-				"invalid chunk location",
-			)
-		}
-
-		chunkAddr := fmt.Sprintf(
-			"%s:%d",
-			location.Primary.Host,
-			location.Primary.Port,
-		)
-
-		chunkConn, err := grpc.NewClient(
-			chunkAddr,
-			grpc.WithTransportCredentials(
-				insecure.NewCredentials(),
-			),
-		)
-
-		if err != nil {
-			log.Fatalf(
-				"failed to connect to Chunk Server: %v",
-				err,
-			)
-		}
-
-		chunkClient :=
-			pb.NewChunkServiceClient(chunkConn)
-
-		// --------------------------------------------------
-		// Read chunk
-		// --------------------------------------------------
-
-		readResp, err :=
-			chunkClient.ReadChunk(
-				ctx,
-				&pb.ReadChunkRequest{
-					ChunkHandle: handle,
-					Offset:      0,
-					Length:      10,
-				},
-			)
-
-		chunkConn.Close()
-
-		if err != nil {
-			log.Fatalf(
-				"ReadChunk failed: %v",
-				err,
-			)
-		}
-
-		if readResp.Status == nil ||
-			!readResp.Status.Success {
-
-			log.Fatalf(
-				"ReadChunk failed: %s",
-				readResp.Status.Message,
-			)
-		}
-
-		fmt.Printf(
-			"Chunk data: %q\n",
-			string(readResp.Data),
-		)
-
-		result = append(
-			result,
-			readResp.Data...,
-		)
-	}
-
-	// --------------------------------------------------
-	// FINAL RESULT
-	// --------------------------------------------------
-
-	fmt.Println("\n========== FINAL FILE ==========")
 	fmt.Printf(
-		"Data: %q\n",
-		string(result),
+		"Metadata size: %d\n",
+		info.Size,
 	)
 
-	fmt.Println(
-		"Size:",
-		len(result),
+	fmt.Printf(
+		"Expected size: %d\n",
+		len(expected),
 	)
 
-	if uint64(len(result)) != resp.SizeBytes {
+	if info.Size != uint64(len(expected)) {
 		log.Fatalf(
-			"SIZE MISMATCH: metadata=%d actual=%d",
-			resp.SizeBytes,
-			len(result),
+			"❌ SIZE MISMATCH: metadata=%d expected=%d",
+			info.Size,
+			len(expected),
 		)
 	}
 
-	fmt.Println("\n✅ READ SUCCESSFUL")
-	fmt.Println("✅ MASTER METADATA RESTORED")
-	fmt.Println("================================")
-
-	_ = io.EOF // keep io import harmless if needed by generated API
+	fmt.Println("✅ DATA + METADATA VERIFIED")
 }

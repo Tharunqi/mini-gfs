@@ -29,6 +29,7 @@ const (
 	MasterService_RangeDeleteFile_FullMethodName      = "/gfs.MasterService/RangeDeleteFile"
 	MasterService_UpdateMasterMetadata_FullMethodName = "/gfs.MasterService/UpdateMasterMetadata"
 	MasterService_TruncateFile_FullMethodName         = "/gfs.MasterService/TruncateFile"
+	MasterService_InsertFile_FullMethodName           = "/gfs.MasterService/InsertFile"
 )
 
 // MasterServiceClient is the client API for MasterService service.
@@ -45,6 +46,7 @@ type MasterServiceClient interface {
 	RangeDeleteFile(ctx context.Context, in *RangeDeleteFileRequest, opts ...grpc.CallOption) (*RangeDeleteFileResponse, error)
 	UpdateMasterMetadata(ctx context.Context, in *UpdateMasterMetadataRequest, opts ...grpc.CallOption) (*UpdateMasterMetadataResponse, error)
 	TruncateFile(ctx context.Context, in *TruncateFileRequest, opts ...grpc.CallOption) (*TruncateFileResponse, error)
+	InsertFile(ctx context.Context, in *InsertFileRequest, opts ...grpc.CallOption) (*InsertFileResponse, error)
 }
 
 type masterServiceClient struct {
@@ -155,6 +157,16 @@ func (c *masterServiceClient) TruncateFile(ctx context.Context, in *TruncateFile
 	return out, nil
 }
 
+func (c *masterServiceClient) InsertFile(ctx context.Context, in *InsertFileRequest, opts ...grpc.CallOption) (*InsertFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InsertFileResponse)
+	err := c.cc.Invoke(ctx, MasterService_InsertFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterServiceServer is the server API for MasterService service.
 // All implementations must embed UnimplementedMasterServiceServer
 // for forward compatibility.
@@ -169,6 +181,7 @@ type MasterServiceServer interface {
 	RangeDeleteFile(context.Context, *RangeDeleteFileRequest) (*RangeDeleteFileResponse, error)
 	UpdateMasterMetadata(context.Context, *UpdateMasterMetadataRequest) (*UpdateMasterMetadataResponse, error)
 	TruncateFile(context.Context, *TruncateFileRequest) (*TruncateFileResponse, error)
+	InsertFile(context.Context, *InsertFileRequest) (*InsertFileResponse, error)
 	mustEmbedUnimplementedMasterServiceServer()
 }
 
@@ -208,6 +221,9 @@ func (UnimplementedMasterServiceServer) UpdateMasterMetadata(context.Context, *U
 }
 func (UnimplementedMasterServiceServer) TruncateFile(context.Context, *TruncateFileRequest) (*TruncateFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TruncateFile not implemented")
+}
+func (UnimplementedMasterServiceServer) InsertFile(context.Context, *InsertFileRequest) (*InsertFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InsertFile not implemented")
 }
 func (UnimplementedMasterServiceServer) mustEmbedUnimplementedMasterServiceServer() {}
 func (UnimplementedMasterServiceServer) testEmbeddedByValue()                       {}
@@ -410,6 +426,24 @@ func _MasterService_TruncateFile_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MasterService_InsertFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InsertFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).InsertFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterService_InsertFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).InsertFile(ctx, req.(*InsertFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MasterService_ServiceDesc is the grpc.ServiceDesc for MasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -456,6 +490,10 @@ var MasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TruncateFile",
 			Handler:    _MasterService_TruncateFile_Handler,
+		},
+		{
+			MethodName: "InsertFile",
+			Handler:    _MasterService_InsertFile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

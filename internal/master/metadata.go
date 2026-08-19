@@ -217,9 +217,6 @@ func (m *MetadataStore) AppendFile(
 		)
 	}
 
-	// For the prototype we can update the logical size here.
-	file.SizeBytes = endOffset
-
 	// Return the affected chunks.
 	chunkHandles := make(
 		[]uint64,
@@ -423,6 +420,40 @@ func (m *MetadataStore) TruncateFile(
 	}
 
 	return deleteChunks, truncateChunk, truncateChunkSize, nil
+}
+
+func (m *MetadataStore) InsertFile(
+	path string,
+	offset uint64,
+	length uint64,
+) (uint64, uint64, error) {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	file, exists := m.files[path]
+	if !exists {
+		return 0, 0, ErrFileNotFound
+	}
+
+	if offset > file.SizeBytes {
+		return 0, 0, errors.New(
+			"offset exceeds file size",
+		)
+	}
+
+	if length == 0 {
+		return 0, 0, nil
+	}
+
+	if offset == file.SizeBytes {
+		return 0, 0, nil
+	}
+
+	startChunk := offset / config.ChunkSize
+	startOffset := offset % config.ChunkSize
+
+	return file.ChunkHandles[startChunk], startOffset, nil
 }
 
 func (m *MetadataStore) Save() error {

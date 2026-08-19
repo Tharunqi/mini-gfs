@@ -703,3 +703,73 @@ func (m *MasterServer) TruncateFile(
 		TruncateChunkSize: truncateSize,
 	}, nil
 }
+
+func (m *MasterServer) InsertFile(
+	ctx context.Context,
+	req *pb.InsertFileRequest,
+) (*pb.InsertFileResponse, error) {
+
+	if req == nil {
+		return &pb.InsertFileResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: "request is nil",
+			},
+		}, nil
+	}
+
+	if req.Length == 0 {
+		return &pb.InsertFileResponse{
+			Status: &pb.Status{
+				Success: true,
+				Message: "nothing to insert",
+			},
+		}, nil
+	}
+
+	chunk, startOffset, err :=
+		m.metadata.InsertFile(
+			req.Path,
+			req.Offset,
+			req.Length,
+		)
+
+	if err != nil {
+		return &pb.InsertFileResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	if chunk == 0 {
+		return &pb.InsertFileResponse{
+			Status: &pb.Status{
+				Success: true,
+				Message: "EOF insert",
+			},
+			StartChunk:  nil,
+			StartOffset: 0,
+		}, nil
+	}
+
+	location, err := m.GetChunkLocations(
+		ctx,
+		&pb.GetChunkLocationsRequest{
+			ChunkHandle: &pb.ChunkHandle{
+				Id:   chunk,
+				Path: req.Path,
+			},
+		},
+	)
+
+	return &pb.InsertFileResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "insert plan generated",
+		},
+		StartChunk:  location.Location,
+		StartOffset: startOffset,
+	}, nil
+}
