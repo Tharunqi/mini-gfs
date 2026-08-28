@@ -39,10 +39,16 @@ func NewStorage() *Storage {
 		panic(err)
 	}
 
-	return &Storage{
+	s := &Storage{
 		baseDir: baseDir,
 		chunks:  make(map[uint64]uint64),
 	}
+
+	if err := s.loadChunks(); err != nil {
+		panic(err)
+	}
+
+	return s
 }
 
 func (s *Storage) chunkPath(id uint64) string {
@@ -87,6 +93,10 @@ func (s *Storage) WriteChunk(
 
 	_, err = file.Write(data)
 	if err != nil {
+		return err
+	}
+
+	if err := file.Sync(); err != nil {
 		return err
 	}
 
@@ -185,16 +195,33 @@ func (s *Storage) DeleteChunk(
 }
 
 func (s *Storage) TruncateChunk(handle ChunkHandle, size uint64) error {
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	path := s.chunkPath(handle.Id)
 
-	err := os.Truncate(path, int64(size))
+	file, err := os.OpenFile(
+		path,
+		os.O_RDWR,
+		0644,
+	)
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			return ErrChunkNotFound
 		}
+
+		return err
+	}
+
+	defer file.Close()
+
+	if err := file.Truncate(int64(size)); err != nil {
+		return err
+	}
+
+	if err := file.Sync(); err != nil {
 		return err
 	}
 
@@ -213,4 +240,52 @@ func (s *Storage) GetChunkSize(handle ChunkHandle) uint64 {
 	}
 
 	return size
+}
+
+func (s *Storage) loadChunks() error {
+
+	entries, err := os.ReadDir(s.baseDir)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+
+		if filepath.Ext(name) != ".chunk" {
+			continue
+		}
+
+		// Example:
+		// 17.chunk → 17
+		idString := name[:len(name)-len(".chunk")]
+
+		var id uint64
+
+		if _, err := fmt.Sscanf(
+			idString,
+			"%d",
+			&id,
+		); err != nil {
+			return fmt.Errorf(
+				"invalid chunk filename %q: %w",
+				name,
+				err,
+			)
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+
+		s.chunks[id] = uint64(info.Size())
+	}
+
+	return nil
 }

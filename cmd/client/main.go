@@ -26,159 +26,24 @@ func main() {
 	fmt.Println("Connected to Master")
 
 	// ========================================================
-	// TEST 1: INSERT INSIDE ONE CHUNK
+	// TEST 1: CREATE + WRITE
 	// ========================================================
 
 	fmt.Println()
 	fmt.Println("========================================")
-	fmt.Println("TEST 1: INSERT INSIDE CHUNK")
+	fmt.Println("TEST 1: CREATE + WRITE")
 	fmt.Println("========================================")
 
-	path := "insert_test_1.txt"
+	path := "persistence_test.txt"
 
 	err = gfs.Create(ctx, path)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Create:", err)
 	}
 
-	initial := []byte("ABCDEFGHIJ")
+	fmt.Println("Created:", path)
 
-	err = gfs.Write(
-		ctx,
-		path,
-		0,
-		initial,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = gfs.Insert(
-		ctx,
-		path,
-		5,
-		[]byte("XYZ"),
-	)
-	if err != nil {
-		log.Fatal("Insert:", err)
-	}
-
-	verify(
-		ctx,
-		gfs,
-		path,
-		"ABCDEXYZFGHIJ",
-	)
-
-	fmt.Println("✅ TEST 1 PASSED")
-
-	// ========================================================
-	// TEST 2: INSERT AT BEGINNING
-	// ========================================================
-
-	fmt.Println()
-	fmt.Println("========================================")
-	fmt.Println("TEST 2: INSERT AT BEGINNING")
-	fmt.Println("========================================")
-
-	path = "insert_test_2.txt"
-
-	err = gfs.Create(ctx, path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = gfs.Write(
-		ctx,
-		path,
-		0,
-		[]byte("ABCDEFGHIJ"),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = gfs.Insert(
-		ctx,
-		path,
-		0,
-		[]byte("XYZ"),
-	)
-	if err != nil {
-		log.Fatal("Insert:", err)
-	}
-
-	verify(
-		ctx,
-		gfs,
-		path,
-		"XYZABCDEFGHIJ",
-	)
-
-	fmt.Println("✅ TEST 2 PASSED")
-
-	// ========================================================
-	// TEST 3: INSERT AT EOF
-	// ========================================================
-
-	fmt.Println()
-	fmt.Println("========================================")
-	fmt.Println("TEST 3: INSERT AT EOF")
-	fmt.Println("========================================")
-
-	path = "insert_test_3.txt"
-
-	err = gfs.Create(ctx, path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = gfs.Write(
-		ctx,
-		path,
-		0,
-		[]byte("ABCDEFGHIJ"),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = gfs.Insert(
-		ctx,
-		path,
-		10,
-		[]byte("XYZ"),
-	)
-	if err != nil {
-		log.Fatal("Insert:", err)
-	}
-
-	verify(
-		ctx,
-		gfs,
-		path,
-		"ABCDEFGHIJXYZ",
-	)
-
-	fmt.Println("✅ TEST 3 PASSED")
-
-	// ========================================================
-	// TEST 4: CROSS-CHUNK INSERT
-	// ========================================================
-
-	fmt.Println()
-	fmt.Println("========================================")
-	fmt.Println("TEST 4: CROSS-CHUNK INSERT")
-	fmt.Println("========================================")
-
-	path = "insert_test_4.txt"
-
-	err = gfs.Create(ctx, path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	initial = []byte(
+	data := []byte(
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
 	)
 
@@ -186,82 +51,180 @@ func main() {
 		ctx,
 		path,
 		0,
-		initial,
+		data,
 	)
+
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Write:", err)
 	}
 
-	// Insert in the middle of chunk 0.
-	err = gfs.Insert(
-		ctx,
-		path,
-		7,
-		[]byte("XYZ"),
-	)
-	if err != nil {
-		log.Fatal("Insert:", err)
-	}
+	fmt.Println("Written:", string(data))
 
 	verify(
 		ctx,
 		gfs,
 		path,
-		"ABCDEFGXYZHIJKLMNOPQRSTUVWXYZ0123456789",
+		string(data),
+	)
+
+	fmt.Println("✅ TEST 1 PASSED")
+
+	// ========================================================
+	// TEST 2: APPEND
+	// ========================================================
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 2: APPEND")
+	fmt.Println("========================================")
+
+	appendData := []byte("APPEND")
+
+	err = gfs.Append(
+		ctx,
+		path,
+		appendData,
+	)
+
+	if err != nil {
+		log.Fatal("Append:", err)
+	}
+
+	expected := string(data) + string(appendData)
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		expected,
+	)
+
+	fmt.Println("✅ TEST 2 PASSED")
+
+	// ========================================================
+	// TEST 3: TRUNCATE
+	// ========================================================
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 3: TRUNCATE")
+	fmt.Println("========================================")
+
+	truncateSize := uint64(20)
+
+	err = gfs.Truncate(
+		ctx,
+		path,
+		truncateSize,
+	)
+
+	if err != nil {
+		log.Fatal("Truncate:", err)
+	}
+
+	expected = expected[:truncateSize]
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		expected,
+	)
+
+	fmt.Println("✅ TEST 3 PASSED")
+
+	// ========================================================
+	// TEST 4: INSERT
+	// ========================================================
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("TEST 4: INSERT")
+	fmt.Println("========================================")
+
+	insertData := []byte("XYZ")
+
+	insertOffset := uint64(5)
+
+	err = gfs.Insert(
+		ctx,
+		path,
+		insertOffset,
+		insertData,
+	)
+
+	if err != nil {
+		log.Fatal("Insert:", err)
+	}
+
+	expected =
+		expected[:insertOffset] +
+			string(insertData) +
+			expected[insertOffset:]
+
+	verify(
+		ctx,
+		gfs,
+		path,
+		expected,
 	)
 
 	fmt.Println("✅ TEST 4 PASSED")
 
 	// ========================================================
-	// TEST 5: INSERT LARGER THAN ONE CHUNK
+	// TEST 5: RANGE DELETE
 	// ========================================================
 
 	fmt.Println()
 	fmt.Println("========================================")
-	fmt.Println("TEST 5: LARGE INSERT")
+	fmt.Println("TEST 5: RANGE DELETE")
 	fmt.Println("========================================")
 
-	path = "insert_test_5.txt"
+	// Delete 3 bytes starting at offset 5.
+	deleteStart := uint64(5)
 
-	err = gfs.Create(ctx, path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = gfs.Write(
+	err = gfs.DeleteRange(
 		ctx,
 		path,
-		0,
-		[]byte("ABCDEFGHIJ"),
+		deleteStart,
+		3,
 	)
+
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("DeleteRange:", err)
 	}
 
-	err = gfs.Insert(
-		ctx,
-		path,
-		5,
-		[]byte("1234567890ABCDE"),
-	)
-	if err != nil {
-		log.Fatal("Insert:", err)
-	}
+	expected =
+		expected[:deleteStart] +
+			expected[deleteStart+3:]
 
 	verify(
 		ctx,
 		gfs,
 		path,
-		"ABCDE1234567890ABCDEFGHIJ",
+		expected,
 	)
 
 	fmt.Println("✅ TEST 5 PASSED")
 
+	// ========================================================
+	// FINAL
+	// ========================================================
+
 	fmt.Println()
 	fmt.Println("========================================")
-	fmt.Println("ALL INSERT TESTS PASSED")
+	fmt.Println("ALL PERSISTENCE PRE-RESTART TESTS PASSED")
 	fmt.Println("========================================")
+
+	fmt.Println()
+	fmt.Println("Now stop the Master and ChunkServer.")
+	fmt.Println("Restart both servers.")
+	fmt.Println("Then run this client again using the READ test below.")
 }
+
+// ============================================================
+// VERIFY
+// ============================================================
 
 func verify(
 	ctx context.Context,
@@ -271,6 +234,7 @@ func verify(
 ) {
 
 	data, err := gfs.Read(ctx, path)
+
 	if err != nil {
 		log.Fatal("Read:", err)
 	}
@@ -293,6 +257,7 @@ func verify(
 	}
 
 	info, err := gfs.Open(ctx, path)
+
 	if err != nil {
 		log.Fatal("Open:", err)
 	}
