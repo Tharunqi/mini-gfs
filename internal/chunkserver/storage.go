@@ -32,8 +32,12 @@ type ChunkHandle struct {
 	path string
 }
 
-func NewStorage() *Storage {
-	baseDir := "chunks"
+type ChunkServerInfo struct{
+	ID string
+	Address string
+}
+
+func NewStorage(baseDir string) *Storage {
 
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		panic(err)

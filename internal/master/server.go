@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
 
 	pb "github.com/Tharunqi/mini-gfs/internal/pb"
 )
@@ -135,7 +133,12 @@ func (m *MasterServer) GetChunkLocations(
 	ctx context.Context,
 	req *pb.GetChunkLocationsRequest,
 ) (*pb.GetChunkLocationsResponse, error) {
-	resp, err := m.metadata.GetChunkLocations(req.ChunkHandle.Id)
+
+	chunk, err :=
+		m.metadata.GetChunkMetadata(
+			req.ChunkHandle.Id,
+		)
+
 	if err != nil {
 		return &pb.GetChunkLocationsResponse{
 			Status: &pb.Status{
@@ -144,58 +147,16 @@ func (m *MasterServer) GetChunkLocations(
 			},
 		}, nil
 	}
-	host, portStr, err := net.SplitHostPort(resp[0])
-	if err != nil {
-		return nil, err
-	}
 
-	port, err := strconv.ParseUint(portStr, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	primary := &pb.ServerInfo{
-		Id:   "chunkserver-1",
-		Host: host,
-		Port: uint32(port),
-	}
-	replicaLocations := make([]*pb.ServerInfo, 0, len(resp)-1)
-
-	for i := 1; i < len(resp); i++ {
-
-		host, portStr, err := net.SplitHostPort(resp[i])
-		if err != nil {
-			return nil, err
-		}
-
-		port, err := strconv.ParseUint(portStr, 10, 32)
-		if err != nil {
-			return nil, err
-		}
-
-		replicaLocations = append(
-			replicaLocations,
-			&pb.ServerInfo{
-				Id:   fmt.Sprintf("chunkserver-%d", i+1),
-				Host: host,
-				Port: uint32(port),
-			},
-		)
-	}
-
-	location := &pb.ChunkLocation{
-		Handle: &pb.ChunkHandle{
-			Id:   req.ChunkHandle.Id,
-			Path: req.ChunkHandle.Path,
-		},
-		Primary:  primary,
-		Replicas: replicaLocations,
-	}
+	location :=
+		chunkLocationFromMetadata(chunk)
 
 	return &pb.GetChunkLocationsResponse{
 		Status: &pb.Status{
 			Success: true,
 			Message: "chunk locations retrieved successfully",
 		},
+
 		Location: location,
 	}, nil
 }
@@ -213,23 +174,41 @@ func (m *MasterServer) AllocateChunk(
 			},
 		}, nil
 	}
+	server, err := m.metadata.AllocateChunkServer()
+
+	if err != nil {
+		return &pb.AllocateChunkResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	err = m.metadata.SetChunkPrimary(
+		chunkHandle,
+		server,
+	)
+
+	location := &pb.ChunkLocation{
+		Handle: &pb.ChunkHandle{
+			Id:   chunkHandle,
+			Path: req.Path,
+		},
+		Primary: &pb.ServerInfo{
+			Id:   server.ID,
+			Host: server.Host,
+			Port: server.Port,
+		},
+		Replicas: []*pb.ServerInfo{},
+	}
 
 	return &pb.AllocateChunkResponse{
 		Status: &pb.Status{
 			Success: true,
 			Message: "chunk allocated successfully",
 		},
-		Location: &pb.ChunkLocation{
-			Handle: &pb.ChunkHandle{
-				Id:   chunkHandle,
-				Path: req.Path,
-			},
-			Primary: &pb.ServerInfo{
-				Id:   "chunkserver1:50052",
-				Host: "localhost",
-				Port: 50052,
-			},
-		},
+		Location: location,
 	}, nil
 }
 
@@ -270,39 +249,44 @@ func (m *MasterServer) WriteFile(
 
 	for _, chunkID := range chunkIDs {
 
-		locationResp, err := m.GetChunkLocations(
-			ctx,
-			&pb.GetChunkLocationsRequest{
-				ChunkHandle: &pb.ChunkHandle{
-					Id:   chunkID,
-					Path: req.Path,
-				},
-			},
-		)
+		chunk, err :=
+			m.metadata.GetChunkMetadata(chunkID)
 
 		if err != nil {
-			return &pb.WriteFileResponse{
-				Status: &pb.Status{
-					Success: false,
-					Message: err.Error(),
-				},
-			}, nil
+			// return error response
 		}
 
-		if locationResp.Status == nil ||
-			!locationResp.Status.Success {
+		// If this chunk has no primary,
+		// choose one now.
+		if chunk.Primary == nil {
 
-			return &pb.WriteFileResponse{
-				Status: &pb.Status{
-					Success: false,
-					Message: "failed to get chunk location",
-				},
-			}, nil
+			server, err :=
+				m.metadata.AllocateChunkServer()
+
+			if err != nil {
+				// return error response
+			}
+
+			err = m.metadata.SetChunkPrimary(
+				chunkID,
+				server,
+			)
+
+			if err != nil {
+				// return error response
+			}
+
+			chunk, err =
+				m.metadata.GetChunkMetadata(chunkID)
+
+			if err != nil {
+				// return error response
+			}
 		}
 
 		locations = append(
 			locations,
-			locationResp.Location,
+			chunkLocationFromMetadata(chunk),
 		)
 	}
 
@@ -339,45 +323,48 @@ func (m *MasterServer) AppendFile(
 		0,
 		len(chunkIDs),
 	)
-
 	for _, chunkID := range chunkIDs {
 
-		locationResp, err := m.GetChunkLocations(
-			ctx,
-			&pb.GetChunkLocationsRequest{
-				ChunkHandle: &pb.ChunkHandle{
-					Id:   chunkID,
-					Path: req.Path,
-				},
-			},
-		)
+		chunk, err :=
+			m.metadata.GetChunkMetadata(chunkID)
 
 		if err != nil {
-			return &pb.AppendFileResponse{
-				Status: &pb.Status{
-					Success: false,
-					Message: err.Error(),
-				},
-			}, nil
+			// return error response
 		}
 
-		if locationResp.Status == nil ||
-			!locationResp.Status.Success {
+		// If this chunk has no primary,
+		// choose one now.
+		if chunk.Primary == nil {
 
-			return &pb.AppendFileResponse{
-				Status: &pb.Status{
-					Success: false,
-					Message: "failed to get chunk location",
-				},
-			}, nil
+			server, err :=
+				m.metadata.AllocateChunkServer()
+
+			if err != nil {
+				// return error response
+			}
+
+			err = m.metadata.SetChunkPrimary(
+				chunkID,
+				server,
+			)
+
+			if err != nil {
+				// return error response
+			}
+
+			chunk, err =
+				m.metadata.GetChunkMetadata(chunkID)
+
+			if err != nil {
+				// return error response
+			}
 		}
 
 		locations = append(
 			locations,
-			locationResp.Location,
+			chunkLocationFromMetadata(chunk),
 		)
 	}
-
 	return &pb.AppendFileResponse{
 		Status: &pb.Status{
 			Success: true,
@@ -772,4 +759,76 @@ func (m *MasterServer) InsertFile(
 		StartChunk:  location.Location,
 		StartOffset: startOffset,
 	}, nil
+}
+
+func (m *MasterServer) RegisterChunkServer(
+	ctx context.Context,
+	req *pb.RegisterChunkServerRequest,
+) (*pb.RegisterChunkServerResponse, error) {
+
+	if req.Server == nil {
+		return &pb.RegisterChunkServerResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: "server info is missing",
+			},
+		}, nil
+	}
+
+	server := req.Server
+
+	m.metadata.RegisterChunkServer(
+		server.Id,
+		server.Host,
+		server.Port,
+	)
+
+	fmt.Printf(
+		"ChunkServer registered: ID=%s %s:%d\n",
+		server.Id,
+		server.Host,
+		server.Port,
+	)
+
+	return &pb.RegisterChunkServerResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "chunk server registered",
+		},
+	}, nil
+}
+
+func chunkLocationFromMetadata(
+	chunk *ChunkMetadata,
+) *pb.ChunkLocation {
+
+	location := &pb.ChunkLocation{
+		Handle: &pb.ChunkHandle{
+			Id:   chunk.Handle.Id,
+			Path: chunk.Handle.path,
+		},
+	}
+
+	if chunk.Primary != nil {
+		location.Primary = &pb.ServerInfo{
+			Id:   chunk.Primary.ID,
+			Host: chunk.Primary.Host,
+			Port: chunk.Primary.Port,
+		}
+	}
+
+	for _, replica := range chunk.Replicas {
+
+		location.Replicas =
+			append(
+				location.Replicas,
+				&pb.ServerInfo{
+					Id:   replica.ID,
+					Host: replica.Host,
+					Port: replica.Port,
+				},
+			)
+	}
+
+	return location
 }

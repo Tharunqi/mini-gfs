@@ -12,14 +12,21 @@ type ChunkServer struct {
 
 	storage      *Storage
 	masterClient pb.MasterServiceClient
+	serverInfo   *pb.ServerInfo
 }
 
 func NewChunkServer(
 	masterClient pb.MasterServiceClient,
+	serverInfo *pb.ServerInfo,
 ) *ChunkServer {
+
 	return &ChunkServer{
-		storage:      NewStorage(),
+		storage: NewStorage(
+			"data/" + serverInfo.Id,
+		),
+
 		masterClient: masterClient,
+		serverInfo:   serverInfo,
 	}
 }
 
@@ -285,4 +292,32 @@ func (c *ChunkServer) TruncateChunk(
 			Message: "chunk truncated successfully",
 		},
 	}, nil
+}
+
+func (c *ChunkServer) RegisterWithMaster(
+	ctx context.Context,
+) error {
+
+	resp, err := c.masterClient.RegisterChunkServer(
+		ctx,
+		&pb.RegisterChunkServerRequest{
+			Server: c.serverInfo,
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if resp.Status == nil ||
+		!resp.Status.Success {
+
+		if resp.Status != nil {
+			return errors.New(resp.Status.Message)
+		}
+
+		return errors.New("chunk server registration failed")
+	}
+
+	return nil
 }

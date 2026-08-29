@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"fmt"
 	"log"
 	"net"
 
@@ -13,6 +16,26 @@ import (
 
 func main() {
 
+	id := flag.String(
+		"id",
+		"chunkserver-1",
+		"chunk server ID",
+	)
+
+	host := flag.String(
+		"host",
+		"localhost",
+		"chunk server host",
+	)
+
+	port := flag.Int(
+		"port",
+		50052,
+		"chunk server port",
+	)
+
+	flag.Parse()
+
 	// ---------------------------------------------------------
 	// Connect to Master
 	// ---------------------------------------------------------
@@ -23,26 +46,77 @@ func main() {
 			insecure.NewCredentials(),
 		),
 	)
+
 	if err != nil {
-		log.Fatalf("failed to connect to master: %v", err)
+		log.Fatalf(
+			"failed to connect to master: %v",
+			err,
+		)
 	}
+
 	defer masterConn.Close()
 
-	masterClient := pb.NewMasterServiceClient(masterConn)
+	masterClient :=
+		pb.NewMasterServiceClient(masterConn)
+
+	// ---------------------------------------------------------
+	// Server information
+	// ---------------------------------------------------------
+
+	serverInfo := &pb.ServerInfo{
+		Id:   *id,
+		Host: *host,
+		Port: uint32(*port),
+	}
 
 	// ---------------------------------------------------------
 	// Create Chunk Server
 	// ---------------------------------------------------------
 
-	server := chunkserver.NewChunkServer(masterClient)
+	server :=
+		chunkserver.NewChunkServer(
+			masterClient,
+			serverInfo,
+		)
 
 	// ---------------------------------------------------------
-	// Listen for Chunk Server clients
+	// Register with Master
 	// ---------------------------------------------------------
 
-	lis, err := net.Listen("tcp", ":50052")
+	err = server.RegisterWithMaster(
+		context.Background(),
+	)
+
 	if err != nil {
-		log.Fatalf("failed to listen on :50052: %v", err)
+		log.Fatalf(
+			"failed to register with master: %v",
+			err,
+		)
+	}
+
+	log.Printf(
+		"Registered %s with Master",
+		*id,
+	)
+
+	// ---------------------------------------------------------
+	// Listen for clients
+	// ---------------------------------------------------------
+
+	address :=
+		fmt.Sprintf("%s:%d", *host, *port)
+
+	lis, err := net.Listen(
+		"tcp",
+		address,
+	)
+
+	if err != nil {
+		log.Fatalf(
+			"failed to listen on %s: %v",
+			address,
+			err,
+		)
 	}
 
 	grpcServer := grpc.NewServer()
@@ -52,9 +126,16 @@ func main() {
 		server,
 	)
 
-	log.Println("Chunk server listening on :50052")
+	log.Printf(
+		"Chunk server %s listening on %s",
+		*id,
+		address,
+	)
 
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve chunk server: %v", err)
+		log.Fatalf(
+			"failed to serve chunk server: %v",
+			err,
+		)
 	}
 }

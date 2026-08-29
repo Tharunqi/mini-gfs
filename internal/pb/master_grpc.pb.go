@@ -30,6 +30,7 @@ const (
 	MasterService_UpdateMasterMetadata_FullMethodName = "/gfs.MasterService/UpdateMasterMetadata"
 	MasterService_TruncateFile_FullMethodName         = "/gfs.MasterService/TruncateFile"
 	MasterService_InsertFile_FullMethodName           = "/gfs.MasterService/InsertFile"
+	MasterService_RegisterChunkServer_FullMethodName  = "/gfs.MasterService/RegisterChunkServer"
 )
 
 // MasterServiceClient is the client API for MasterService service.
@@ -47,6 +48,7 @@ type MasterServiceClient interface {
 	UpdateMasterMetadata(ctx context.Context, in *UpdateMasterMetadataRequest, opts ...grpc.CallOption) (*UpdateMasterMetadataResponse, error)
 	TruncateFile(ctx context.Context, in *TruncateFileRequest, opts ...grpc.CallOption) (*TruncateFileResponse, error)
 	InsertFile(ctx context.Context, in *InsertFileRequest, opts ...grpc.CallOption) (*InsertFileResponse, error)
+	RegisterChunkServer(ctx context.Context, in *RegisterChunkServerRequest, opts ...grpc.CallOption) (*RegisterChunkServerResponse, error)
 }
 
 type masterServiceClient struct {
@@ -167,6 +169,16 @@ func (c *masterServiceClient) InsertFile(ctx context.Context, in *InsertFileRequ
 	return out, nil
 }
 
+func (c *masterServiceClient) RegisterChunkServer(ctx context.Context, in *RegisterChunkServerRequest, opts ...grpc.CallOption) (*RegisterChunkServerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterChunkServerResponse)
+	err := c.cc.Invoke(ctx, MasterService_RegisterChunkServer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterServiceServer is the server API for MasterService service.
 // All implementations must embed UnimplementedMasterServiceServer
 // for forward compatibility.
@@ -182,6 +194,7 @@ type MasterServiceServer interface {
 	UpdateMasterMetadata(context.Context, *UpdateMasterMetadataRequest) (*UpdateMasterMetadataResponse, error)
 	TruncateFile(context.Context, *TruncateFileRequest) (*TruncateFileResponse, error)
 	InsertFile(context.Context, *InsertFileRequest) (*InsertFileResponse, error)
+	RegisterChunkServer(context.Context, *RegisterChunkServerRequest) (*RegisterChunkServerResponse, error)
 	mustEmbedUnimplementedMasterServiceServer()
 }
 
@@ -224,6 +237,9 @@ func (UnimplementedMasterServiceServer) TruncateFile(context.Context, *TruncateF
 }
 func (UnimplementedMasterServiceServer) InsertFile(context.Context, *InsertFileRequest) (*InsertFileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method InsertFile not implemented")
+}
+func (UnimplementedMasterServiceServer) RegisterChunkServer(context.Context, *RegisterChunkServerRequest) (*RegisterChunkServerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegisterChunkServer not implemented")
 }
 func (UnimplementedMasterServiceServer) mustEmbedUnimplementedMasterServiceServer() {}
 func (UnimplementedMasterServiceServer) testEmbeddedByValue()                       {}
@@ -444,6 +460,24 @@ func _MasterService_InsertFile_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MasterService_RegisterChunkServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterChunkServerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).RegisterChunkServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterService_RegisterChunkServer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).RegisterChunkServer(ctx, req.(*RegisterChunkServerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MasterService_ServiceDesc is the grpc.ServiceDesc for MasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -494,6 +528,10 @@ var MasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InsertFile",
 			Handler:    _MasterService_InsertFile_Handler,
+		},
+		{
+			MethodName: "RegisterChunkServer",
+			Handler:    _MasterService_RegisterChunkServer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

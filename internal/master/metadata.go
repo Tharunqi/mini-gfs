@@ -21,6 +21,18 @@ type ChunkHandle struct {
 	path string
 }
 
+type ChunkServerInfo struct {
+	ID   string
+	Host string
+	Port uint32
+}
+
+type ChunkMetadata struct {
+	Handle   ChunkHandle
+	Primary  *ChunkServerInfo
+	Replicas []*ChunkServerInfo
+}
+
 type FileMetadata struct {
 	Path         string
 	SizeBytes    uint64
@@ -28,22 +40,30 @@ type FileMetadata struct {
 }
 
 type persistentMetadata struct {
-	Files   map[string]*FileMetadata `json:"files"`
-	ChunkID uint64                   `json:"chunk_id"`
+	Files          map[string]*FileMetadata    `json:"files"`
+	ChunkID        uint64                      `json:"chunk_id"`
+	ChunkServers   map[string]*ChunkServerInfo `json:"chunk_servers"`
+	ChunkLocations map[uint64]*ChunkMetadata   `json:"chunk_locations"`
 }
 
 type MetadataStore struct {
-	mu       sync.RWMutex
-	files    map[string]*FileMetadata
-	chunkid  uint64
-	dataPath string
+	mu             sync.RWMutex
+	files          map[string]*FileMetadata
+	chunkid        uint64
+	dataPath       string
+	chunkServers   map[string]*ChunkServerInfo
+	chunkLocations map[uint64]*ChunkMetadata
+	nextServer     uint64
 }
 
 func NewMetadataStore() *MetadataStore {
 	return &MetadataStore{
-		files:    make(map[string]*FileMetadata),
-		chunkid:  1,
-		dataPath: "metadata.json",
+		files:          make(map[string]*FileMetadata),
+		chunkid:        1,
+		dataPath:       "metadata.json",
+		chunkServers:   make(map[string]*ChunkServerInfo),
+		chunkLocations: make(map[uint64]*ChunkMetadata),
+		nextServer:     0,
 	}
 }
 
@@ -92,12 +112,6 @@ func (m *MetadataStore) OpenFile(path string) (*FileMetadata, error) {
 	return filemetadata, nil
 }
 
-func (m *MetadataStore) GetChunkLocations(chunkHandle uint64) ([]string, error) {
-	// For simplicity, we return a static list of chunk server addresses.
-	// In a real implementation, this would query the metadata store for the actual locations.
-	return []string{"localhost:50052"}, nil
-}
-
 func (m *MetadataStore) AllocateChunk(path string, index uint64) (uint64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -118,6 +132,15 @@ func (m *MetadataStore) AllocateChunk(path string, index uint64) (uint64, error)
 	m.chunkid++
 
 	newHandle := m.chunkid
+
+	m.chunkLocations[newHandle] = &ChunkMetadata{
+		Handle: ChunkHandle{
+			Id:   newHandle,
+			path: path,
+		},
+		Primary:  nil,
+		Replicas: []*ChunkServerInfo{},
+	}
 
 	// Insert at index.
 	file.ChunkHandles = append(
@@ -162,10 +185,21 @@ func (m *MetadataStore) WriteFile(path string, offset uint64, length uint64) ([]
 
 		m.chunkid++
 
+		newChunkID := m.chunkid
+
 		file.ChunkHandles = append(
 			file.ChunkHandles,
-			m.chunkid,
+			newChunkID,
 		)
+
+		m.chunkLocations[newChunkID] = &ChunkMetadata{
+			Handle: ChunkHandle{
+				Id:   newChunkID,
+				path: path,
+			},
+			Primary:  nil,
+			Replicas: []*ChunkServerInfo{},
+		}
 	}
 
 	// Return all chunks affected by this write.
@@ -211,10 +245,21 @@ func (m *MetadataStore) AppendFile(
 	for uint64(len(file.ChunkHandles)) <= endChunk {
 		m.chunkid++
 
+		newChunkID := m.chunkid
+
 		file.ChunkHandles = append(
 			file.ChunkHandles,
-			m.chunkid,
+			newChunkID,
 		)
+
+		m.chunkLocations[newChunkID] = &ChunkMetadata{
+			Handle: ChunkHandle{
+				Id:   newChunkID,
+				path: path,
+			},
+			Primary:  nil,
+			Replicas: []*ChunkServerInfo{},
+		}
 	}
 
 	// Return the affected chunks.
@@ -317,6 +362,10 @@ func (m *MetadataStore) UpdateMasterMetadata(
 				break
 			}
 		}
+		delete(
+			m.chunkLocations,
+			chunk.Id,
+		)
 		file.SizeBytes = file.SizeBytes - size
 	} else if isDelete == 1 {
 		file.SizeBytes = file.SizeBytes - size
@@ -461,8 +510,10 @@ func (m *MetadataStore) Save() error {
 	defer m.mu.RUnlock()
 
 	data := persistentMetadata{
-		Files:   m.files,
-		ChunkID: m.chunkid,
+		Files:          m.files,
+		ChunkID:        m.chunkid,
+		ChunkServers:   m.chunkServers,
+		ChunkLocations: m.chunkLocations,
 	}
 
 	bytes, err := json.MarshalIndent(
@@ -509,11 +560,19 @@ func (m *MetadataStore) Load() error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// First startup.
-			// There is no metadata yet.
 			m.files = make(
 				map[string]*FileMetadata,
 			)
+
 			m.chunkid = 1
+
+			m.chunkServers = make(
+				map[string]*ChunkServerInfo,
+			)
+
+			m.chunkLocations = make(
+				map[uint64]*ChunkMetadata,
+			)
 
 			return nil
 		}
@@ -537,8 +596,107 @@ func (m *MetadataStore) Load() error {
 		)
 	}
 
+	if data.ChunkServers == nil {
+		data.ChunkServers = make(
+			map[string]*ChunkServerInfo,
+		)
+	}
+
+	if data.ChunkLocations == nil {
+		data.ChunkLocations = make(
+			map[uint64]*ChunkMetadata,
+		)
+	}
+
 	m.files = data.Files
 	m.chunkid = data.ChunkID
+	m.chunkServers = data.ChunkServers
+	m.chunkLocations = data.ChunkLocations
 
 	return nil
+}
+
+func (m *MetadataStore) RegisterChunkServer(
+	id string,
+	host string,
+	port uint32,
+) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.chunkServers[id] = &ChunkServerInfo{
+		ID:   id,
+		Host: host,
+		Port: port,
+	}
+}
+
+func (m *MetadataStore) GetChunkMetadata(
+	chunkID uint64,
+) (*ChunkMetadata, error) {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	chunk, exists := m.chunkLocations[chunkID]
+
+	if !exists {
+		return nil, errors.New(
+			"chunk not found",
+		)
+	}
+
+	return chunk, nil
+}
+
+func (m *MetadataStore) SetChunkPrimary(
+	chunkID uint64,
+	server *ChunkServerInfo,
+) error {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	chunk, exists := m.chunkLocations[chunkID]
+
+	if !exists {
+		return errors.New("chunk not found")
+	}
+
+	chunk.Primary = server
+
+	return nil
+}
+
+func (m *MetadataStore) AllocateChunkServer() (*ChunkServerInfo, error) {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if len(m.chunkServers) == 0 {
+		return nil, errors.New(
+			"no chunk servers available",
+		)
+	}
+
+	servers := make([]*ChunkServerInfo, 0, len(m.chunkServers))
+
+	for _, server := range m.chunkServers {
+		servers = append(servers, server)
+	}
+
+	server := servers[m.nextServer%uint64(len(servers))]
+
+	m.nextServer++
+
+	return server, nil
+}
+
+func (m *MetadataStore) DeleteChunkMetadata(
+	chunkID uint64,
+) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	delete(m.chunkLocations, chunkID)
 }

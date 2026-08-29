@@ -123,6 +123,20 @@ message InsertFileResponse{
     uint64 start_offset = 3;
 }
 
+message RegisterChunkServerRequest {
+    ServerInfo server = 1;
+}
+
+message RegisterChunkServerResponse {
+    Status status = 1;
+}
+
+rpc DeleteChunkMetadata(
+    DeleteChunkMetadataRequest
+) returns (
+    DeleteChunkMetadataResponse
+);
+
 service MasterService {
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
 
@@ -145,4 +159,6 @@ service MasterService {
     rpc TruncateFile(TruncateFileRequest) returns (TruncateFileResponse);
 
     rpc InsertFile(InsertFileRequest) returns (InsertFileResponse);
+
+    rpc RegisterChunkServer(RegisterChunkServerRequest) returns (RegisterChunkServerResponse);
 }

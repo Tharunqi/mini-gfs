@@ -1221,6 +1221,94 @@ func (x *InsertFileResponse) GetStartOffset() uint64 {
 	return 0
 }
 
+type RegisterChunkServerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Server        *ServerInfo            `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterChunkServerRequest) Reset() {
+	*x = RegisterChunkServerRequest{}
+	mi := &file_master_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterChunkServerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterChunkServerRequest) ProtoMessage() {}
+
+func (x *RegisterChunkServerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterChunkServerRequest.ProtoReflect.Descriptor instead.
+func (*RegisterChunkServerRequest) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *RegisterChunkServerRequest) GetServer() *ServerInfo {
+	if x != nil {
+		return x.Server
+	}
+	return nil
+}
+
+type RegisterChunkServerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterChunkServerResponse) Reset() {
+	*x = RegisterChunkServerResponse{}
+	mi := &file_master_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterChunkServerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterChunkServerResponse) ProtoMessage() {}
+
+func (x *RegisterChunkServerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_master_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterChunkServerResponse.ProtoReflect.Descriptor instead.
+func (*RegisterChunkServerResponse) Descriptor() ([]byte, []int) {
+	return file_master_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *RegisterChunkServerResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 var File_master_proto protoreflect.FileDescriptor
 
 const file_master_proto_rawDesc = "" +
@@ -1301,7 +1389,11 @@ const file_master_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\x123\n" +
 	"\vstart_chunk\x18\x02 \x01(\v2\x12.gfs.ChunkLocationR\n" +
 	"startChunk\x12!\n" +
-	"\fstart_offset\x18\x03 \x01(\x04R\vstartOffset2\x8c\x06\n" +
+	"\fstart_offset\x18\x03 \x01(\x04R\vstartOffset\"E\n" +
+	"\x1aRegisterChunkServerRequest\x12'\n" +
+	"\x06server\x18\x01 \x01(\v2\x0f.gfs.ServerInfoR\x06server\"B\n" +
+	"\x1bRegisterChunkServerResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status2\xe6\x06\n" +
 	"\rMasterService\x12=\n" +
 	"\n" +
 	"CreateFile\x12\x16.gfs.CreateFileRequest\x1a\x17.gfs.CreateFileResponse\x127\n" +
@@ -1317,7 +1409,8 @@ const file_master_proto_rawDesc = "" +
 	"\x14UpdateMasterMetadata\x12 .gfs.UpdateMasterMetadataRequest\x1a!.gfs.UpdateMasterMetadataResponse\x12C\n" +
 	"\fTruncateFile\x12\x18.gfs.TruncateFileRequest\x1a\x19.gfs.TruncateFileResponse\x12=\n" +
 	"\n" +
-	"InsertFile\x12\x16.gfs.InsertFileRequest\x1a\x17.gfs.InsertFileResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
+	"InsertFile\x12\x16.gfs.InsertFileRequest\x1a\x17.gfs.InsertFileResponse\x12X\n" +
+	"\x13RegisterChunkServer\x12\x1f.gfs.RegisterChunkServerRequest\x1a .gfs.RegisterChunkServerResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
 
 var (
 	file_master_proto_rawDescOnce sync.Once
@@ -1331,7 +1424,7 @@ func file_master_proto_rawDescGZIP() []byte {
 	return file_master_proto_rawDescData
 }
 
-var file_master_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_master_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_master_proto_goTypes = []any{
 	(*CreateFileRequest)(nil),            // 0: gfs.CreateFileRequest
 	(*CreateFileResponse)(nil),           // 1: gfs.CreateFileResponse
@@ -1355,62 +1448,69 @@ var file_master_proto_goTypes = []any{
 	(*TruncateFileResponse)(nil),         // 19: gfs.TruncateFileResponse
 	(*InsertFileRequest)(nil),            // 20: gfs.InsertFileRequest
 	(*InsertFileResponse)(nil),           // 21: gfs.InsertFileResponse
-	(*Status)(nil),                       // 22: gfs.Status
-	(*ChunkHandle)(nil),                  // 23: gfs.ChunkHandle
-	(*ChunkLocation)(nil),                // 24: gfs.ChunkLocation
+	(*RegisterChunkServerRequest)(nil),   // 22: gfs.RegisterChunkServerRequest
+	(*RegisterChunkServerResponse)(nil),  // 23: gfs.RegisterChunkServerResponse
+	(*Status)(nil),                       // 24: gfs.Status
+	(*ChunkHandle)(nil),                  // 25: gfs.ChunkHandle
+	(*ChunkLocation)(nil),                // 26: gfs.ChunkLocation
+	(*ServerInfo)(nil),                   // 27: gfs.ServerInfo
 }
 var file_master_proto_depIdxs = []int32{
-	22, // 0: gfs.CreateFileResponse.status:type_name -> gfs.Status
-	22, // 1: gfs.OpenFileResponse.status:type_name -> gfs.Status
-	23, // 2: gfs.OpenFileResponse.chunks:type_name -> gfs.ChunkHandle
-	22, // 3: gfs.DeleteFileResponse.status:type_name -> gfs.Status
-	23, // 4: gfs.GetChunkLocationsRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	22, // 5: gfs.GetChunkLocationsResponse.status:type_name -> gfs.Status
-	24, // 6: gfs.GetChunkLocationsResponse.location:type_name -> gfs.ChunkLocation
-	22, // 7: gfs.AllocateChunkResponse.status:type_name -> gfs.Status
-	24, // 8: gfs.AllocateChunkResponse.location:type_name -> gfs.ChunkLocation
-	22, // 9: gfs.WriteFileResponse.status:type_name -> gfs.Status
-	24, // 10: gfs.WriteFileResponse.locations:type_name -> gfs.ChunkLocation
-	22, // 11: gfs.AppendFileResponse.status:type_name -> gfs.Status
-	24, // 12: gfs.AppendFileResponse.locations:type_name -> gfs.ChunkLocation
-	22, // 13: gfs.RangeDeleteFileResponse.status:type_name -> gfs.Status
-	24, // 14: gfs.RangeDeleteFileResponse.before_range:type_name -> gfs.ChunkLocation
-	24, // 15: gfs.RangeDeleteFileResponse.range:type_name -> gfs.ChunkLocation
-	24, // 16: gfs.RangeDeleteFileResponse.after_range:type_name -> gfs.ChunkLocation
-	23, // 17: gfs.UpdateMasterMetadataRequest.chunk:type_name -> gfs.ChunkHandle
-	22, // 18: gfs.UpdateMasterMetadataResponse.status:type_name -> gfs.Status
-	22, // 19: gfs.TruncateFileResponse.status:type_name -> gfs.Status
-	24, // 20: gfs.TruncateFileResponse.delete_chunks:type_name -> gfs.ChunkLocation
-	24, // 21: gfs.TruncateFileResponse.truncate_chunk:type_name -> gfs.ChunkLocation
-	22, // 22: gfs.InsertFileResponse.status:type_name -> gfs.Status
-	24, // 23: gfs.InsertFileResponse.start_chunk:type_name -> gfs.ChunkLocation
-	0,  // 24: gfs.MasterService.CreateFile:input_type -> gfs.CreateFileRequest
-	2,  // 25: gfs.MasterService.OpenFile:input_type -> gfs.OpenFileRequest
-	4,  // 26: gfs.MasterService.DeleteFile:input_type -> gfs.DeleteFileRequest
-	6,  // 27: gfs.MasterService.GetChunkLocations:input_type -> gfs.GetChunkLocationsRequest
-	8,  // 28: gfs.MasterService.AllocateChunk:input_type -> gfs.AllocateChunkRequest
-	10, // 29: gfs.MasterService.WriteFile:input_type -> gfs.WriteFileRequest
-	12, // 30: gfs.MasterService.AppendFile:input_type -> gfs.AppendFileRequest
-	14, // 31: gfs.MasterService.RangeDeleteFile:input_type -> gfs.RangeDeleteFileRequest
-	16, // 32: gfs.MasterService.UpdateMasterMetadata:input_type -> gfs.UpdateMasterMetadataRequest
-	18, // 33: gfs.MasterService.TruncateFile:input_type -> gfs.TruncateFileRequest
-	20, // 34: gfs.MasterService.InsertFile:input_type -> gfs.InsertFileRequest
-	1,  // 35: gfs.MasterService.CreateFile:output_type -> gfs.CreateFileResponse
-	3,  // 36: gfs.MasterService.OpenFile:output_type -> gfs.OpenFileResponse
-	5,  // 37: gfs.MasterService.DeleteFile:output_type -> gfs.DeleteFileResponse
-	7,  // 38: gfs.MasterService.GetChunkLocations:output_type -> gfs.GetChunkLocationsResponse
-	9,  // 39: gfs.MasterService.AllocateChunk:output_type -> gfs.AllocateChunkResponse
-	11, // 40: gfs.MasterService.WriteFile:output_type -> gfs.WriteFileResponse
-	13, // 41: gfs.MasterService.AppendFile:output_type -> gfs.AppendFileResponse
-	15, // 42: gfs.MasterService.RangeDeleteFile:output_type -> gfs.RangeDeleteFileResponse
-	17, // 43: gfs.MasterService.UpdateMasterMetadata:output_type -> gfs.UpdateMasterMetadataResponse
-	19, // 44: gfs.MasterService.TruncateFile:output_type -> gfs.TruncateFileResponse
-	21, // 45: gfs.MasterService.InsertFile:output_type -> gfs.InsertFileResponse
-	35, // [35:46] is the sub-list for method output_type
-	24, // [24:35] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	24, // 0: gfs.CreateFileResponse.status:type_name -> gfs.Status
+	24, // 1: gfs.OpenFileResponse.status:type_name -> gfs.Status
+	25, // 2: gfs.OpenFileResponse.chunks:type_name -> gfs.ChunkHandle
+	24, // 3: gfs.DeleteFileResponse.status:type_name -> gfs.Status
+	25, // 4: gfs.GetChunkLocationsRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	24, // 5: gfs.GetChunkLocationsResponse.status:type_name -> gfs.Status
+	26, // 6: gfs.GetChunkLocationsResponse.location:type_name -> gfs.ChunkLocation
+	24, // 7: gfs.AllocateChunkResponse.status:type_name -> gfs.Status
+	26, // 8: gfs.AllocateChunkResponse.location:type_name -> gfs.ChunkLocation
+	24, // 9: gfs.WriteFileResponse.status:type_name -> gfs.Status
+	26, // 10: gfs.WriteFileResponse.locations:type_name -> gfs.ChunkLocation
+	24, // 11: gfs.AppendFileResponse.status:type_name -> gfs.Status
+	26, // 12: gfs.AppendFileResponse.locations:type_name -> gfs.ChunkLocation
+	24, // 13: gfs.RangeDeleteFileResponse.status:type_name -> gfs.Status
+	26, // 14: gfs.RangeDeleteFileResponse.before_range:type_name -> gfs.ChunkLocation
+	26, // 15: gfs.RangeDeleteFileResponse.range:type_name -> gfs.ChunkLocation
+	26, // 16: gfs.RangeDeleteFileResponse.after_range:type_name -> gfs.ChunkLocation
+	25, // 17: gfs.UpdateMasterMetadataRequest.chunk:type_name -> gfs.ChunkHandle
+	24, // 18: gfs.UpdateMasterMetadataResponse.status:type_name -> gfs.Status
+	24, // 19: gfs.TruncateFileResponse.status:type_name -> gfs.Status
+	26, // 20: gfs.TruncateFileResponse.delete_chunks:type_name -> gfs.ChunkLocation
+	26, // 21: gfs.TruncateFileResponse.truncate_chunk:type_name -> gfs.ChunkLocation
+	24, // 22: gfs.InsertFileResponse.status:type_name -> gfs.Status
+	26, // 23: gfs.InsertFileResponse.start_chunk:type_name -> gfs.ChunkLocation
+	27, // 24: gfs.RegisterChunkServerRequest.server:type_name -> gfs.ServerInfo
+	24, // 25: gfs.RegisterChunkServerResponse.status:type_name -> gfs.Status
+	0,  // 26: gfs.MasterService.CreateFile:input_type -> gfs.CreateFileRequest
+	2,  // 27: gfs.MasterService.OpenFile:input_type -> gfs.OpenFileRequest
+	4,  // 28: gfs.MasterService.DeleteFile:input_type -> gfs.DeleteFileRequest
+	6,  // 29: gfs.MasterService.GetChunkLocations:input_type -> gfs.GetChunkLocationsRequest
+	8,  // 30: gfs.MasterService.AllocateChunk:input_type -> gfs.AllocateChunkRequest
+	10, // 31: gfs.MasterService.WriteFile:input_type -> gfs.WriteFileRequest
+	12, // 32: gfs.MasterService.AppendFile:input_type -> gfs.AppendFileRequest
+	14, // 33: gfs.MasterService.RangeDeleteFile:input_type -> gfs.RangeDeleteFileRequest
+	16, // 34: gfs.MasterService.UpdateMasterMetadata:input_type -> gfs.UpdateMasterMetadataRequest
+	18, // 35: gfs.MasterService.TruncateFile:input_type -> gfs.TruncateFileRequest
+	20, // 36: gfs.MasterService.InsertFile:input_type -> gfs.InsertFileRequest
+	22, // 37: gfs.MasterService.RegisterChunkServer:input_type -> gfs.RegisterChunkServerRequest
+	1,  // 38: gfs.MasterService.CreateFile:output_type -> gfs.CreateFileResponse
+	3,  // 39: gfs.MasterService.OpenFile:output_type -> gfs.OpenFileResponse
+	5,  // 40: gfs.MasterService.DeleteFile:output_type -> gfs.DeleteFileResponse
+	7,  // 41: gfs.MasterService.GetChunkLocations:output_type -> gfs.GetChunkLocationsResponse
+	9,  // 42: gfs.MasterService.AllocateChunk:output_type -> gfs.AllocateChunkResponse
+	11, // 43: gfs.MasterService.WriteFile:output_type -> gfs.WriteFileResponse
+	13, // 44: gfs.MasterService.AppendFile:output_type -> gfs.AppendFileResponse
+	15, // 45: gfs.MasterService.RangeDeleteFile:output_type -> gfs.RangeDeleteFileResponse
+	17, // 46: gfs.MasterService.UpdateMasterMetadata:output_type -> gfs.UpdateMasterMetadataResponse
+	19, // 47: gfs.MasterService.TruncateFile:output_type -> gfs.TruncateFileResponse
+	21, // 48: gfs.MasterService.InsertFile:output_type -> gfs.InsertFileResponse
+	23, // 49: gfs.MasterService.RegisterChunkServer:output_type -> gfs.RegisterChunkServerResponse
+	38, // [38:50] is the sub-list for method output_type
+	26, // [26:38] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_master_proto_init() }
@@ -1425,7 +1525,7 @@ func file_master_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_master_proto_rawDesc), len(file_master_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
