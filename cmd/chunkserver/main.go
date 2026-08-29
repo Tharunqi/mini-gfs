@@ -82,9 +82,16 @@ func main() {
 	// ---------------------------------------------------------
 	// Register with Master
 	// ---------------------------------------------------------
+	ctx, cancel := context.WithCancel(
+		context.Background(),
+	)
+
+	defer cancel()
+
+	go server.StartHeartbeat(ctx)
 
 	err = server.RegisterWithMaster(
-		context.Background(),
+		ctx,
 	)
 
 	if err != nil {

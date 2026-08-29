@@ -79,6 +79,19 @@ message RangeDeleteFileRequest{
     uint64 length = 3;
 }
 
+message HeartbeatRequest {
+
+    ServerInfo server = 1;
+
+    repeated ChunkHandle chunks = 2;
+
+    uint64 available_space = 3;
+}
+
+message HeartbeatResponse {
+    Status status = 1;
+}
+
 message RangeDeleteFileResponse{
     Status status = 1;
     repeated ChunkLocation before_range= 2;
@@ -131,12 +144,6 @@ message RegisterChunkServerResponse {
     Status status = 1;
 }
 
-rpc DeleteChunkMetadata(
-    DeleteChunkMetadataRequest
-) returns (
-    DeleteChunkMetadataResponse
-);
-
 service MasterService {
     rpc CreateFile(CreateFileRequest) returns (CreateFileResponse);
 
@@ -161,4 +168,6 @@ service MasterService {
     rpc InsertFile(InsertFileRequest) returns (InsertFileResponse);
 
     rpc RegisterChunkServer(RegisterChunkServerRequest) returns (RegisterChunkServerResponse);
+
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
 }

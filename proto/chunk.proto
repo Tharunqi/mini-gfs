@@ -44,22 +44,6 @@ message DeleteChunkResponse {
     Status status = 1;
 }
 
-message HeartbeatRequest {
-
-    // Which chunk server is sending this heartbeat
-    ServerInfo server = 1;
-
-    // Chunks currently stored on this server
-    repeated ChunkHandle chunks = 2;
-
-    // Remaining free disk space (bytes)
-    uint64 available_space = 3;
-}
-
-message HeartbeatResponse {
-    Status status = 1;
-}
-
 message TruncateChunkRequest{
     ChunkHandle chunk_handle = 1;
     uint64 size = 2;
@@ -79,9 +63,6 @@ service ChunkService {
 
     rpc DeleteChunk(DeleteChunkRequest)
         returns (DeleteChunkResponse);
-
-    rpc Heartbeat(HeartbeatRequest)
-        returns (HeartbeatResponse);
 
     rpc TruncateChunk(TruncateChunkRequest) returns (TruncateChunkResponse);
 }

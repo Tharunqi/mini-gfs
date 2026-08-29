@@ -12,20 +12,25 @@
   },
   "chunk_id": 10,
   "chunk_servers": {
-    "chunkserver-1": {
-      "ID": "chunkserver-1",
-      "Host": "localhost",
-      "Port": 50052
-    },
     "chunkserver-2": {
       "ID": "chunkserver-2",
       "Host": "localhost",
-      "Port": 50053
+      "Port": 50053,
+      "LastHeartbeat": 1787991363,
+      "Chunks": [
+        9
+      ],
+      "AvailableSpace": 0
     },
     "chunkserver-3": {
       "ID": "chunkserver-3",
       "Host": "localhost",
-      "Port": 50054
+      "Port": 50054,
+      "LastHeartbeat": 1787991366,
+      "Chunks": [
+        10
+      ],
+      "AvailableSpace": 0
     }
   },
   "chunk_locations": {
@@ -36,7 +41,10 @@
       "Primary": {
         "ID": "chunkserver-3",
         "Host": "localhost",
-        "Port": 50054
+        "Port": 50054,
+        "LastHeartbeat": 0,
+        "Chunks": null,
+        "AvailableSpace": 0
       },
       "Replicas": []
     },
@@ -47,7 +55,10 @@
       "Primary": {
         "ID": "chunkserver-1",
         "Host": "localhost",
-        "Port": 50052
+        "Port": 50052,
+        "LastHeartbeat": 0,
+        "Chunks": null,
+        "AvailableSpace": 0
       },
       "Replicas": []
     },
@@ -58,7 +69,10 @@
       "Primary": {
         "ID": "chunkserver-2",
         "Host": "localhost",
-        "Port": 50053
+        "Port": 50053,
+        "LastHeartbeat": 0,
+        "Chunks": null,
+        "AvailableSpace": 0
       },
       "Replicas": []
     }

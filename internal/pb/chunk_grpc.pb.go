@@ -22,7 +22,6 @@ const (
 	ChunkService_WriteChunk_FullMethodName    = "/gfs.ChunkService/WriteChunk"
 	ChunkService_ReadChunk_FullMethodName     = "/gfs.ChunkService/ReadChunk"
 	ChunkService_DeleteChunk_FullMethodName   = "/gfs.ChunkService/DeleteChunk"
-	ChunkService_Heartbeat_FullMethodName     = "/gfs.ChunkService/Heartbeat"
 	ChunkService_TruncateChunk_FullMethodName = "/gfs.ChunkService/TruncateChunk"
 )
 
@@ -33,7 +32,6 @@ type ChunkServiceClient interface {
 	WriteChunk(ctx context.Context, in *WriteChunkRequest, opts ...grpc.CallOption) (*WriteChunkResponse, error)
 	ReadChunk(ctx context.Context, in *ReadChunkRequest, opts ...grpc.CallOption) (*ReadChunkResponse, error)
 	DeleteChunk(ctx context.Context, in *DeleteChunkRequest, opts ...grpc.CallOption) (*DeleteChunkResponse, error)
-	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
 	TruncateChunk(ctx context.Context, in *TruncateChunkRequest, opts ...grpc.CallOption) (*TruncateChunkResponse, error)
 }
 
@@ -75,16 +73,6 @@ func (c *chunkServiceClient) DeleteChunk(ctx context.Context, in *DeleteChunkReq
 	return out, nil
 }
 
-func (c *chunkServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(HeartbeatResponse)
-	err := c.cc.Invoke(ctx, ChunkService_Heartbeat_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *chunkServiceClient) TruncateChunk(ctx context.Context, in *TruncateChunkRequest, opts ...grpc.CallOption) (*TruncateChunkResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TruncateChunkResponse)
@@ -102,7 +90,6 @@ type ChunkServiceServer interface {
 	WriteChunk(context.Context, *WriteChunkRequest) (*WriteChunkResponse, error)
 	ReadChunk(context.Context, *ReadChunkRequest) (*ReadChunkResponse, error)
 	DeleteChunk(context.Context, *DeleteChunkRequest) (*DeleteChunkResponse, error)
-	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
 	TruncateChunk(context.Context, *TruncateChunkRequest) (*TruncateChunkResponse, error)
 	mustEmbedUnimplementedChunkServiceServer()
 }
@@ -122,9 +109,6 @@ func (UnimplementedChunkServiceServer) ReadChunk(context.Context, *ReadChunkRequ
 }
 func (UnimplementedChunkServiceServer) DeleteChunk(context.Context, *DeleteChunkRequest) (*DeleteChunkResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteChunk not implemented")
-}
-func (UnimplementedChunkServiceServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Heartbeat not implemented")
 }
 func (UnimplementedChunkServiceServer) TruncateChunk(context.Context, *TruncateChunkRequest) (*TruncateChunkResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TruncateChunk not implemented")
@@ -204,24 +188,6 @@ func _ChunkService_DeleteChunk_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChunkService_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HeartbeatRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChunkServiceServer).Heartbeat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ChunkService_Heartbeat_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChunkServiceServer).Heartbeat(ctx, req.(*HeartbeatRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ChunkService_TruncateChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(TruncateChunkRequest)
 	if err := dec(in); err != nil {
@@ -258,10 +224,6 @@ var ChunkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteChunk",
 			Handler:    _ChunkService_DeleteChunk_Handler,
-		},
-		{
-			MethodName: "Heartbeat",
-			Handler:    _ChunkService_Heartbeat_Handler,
 		},
 		{
 			MethodName: "TruncateChunk",

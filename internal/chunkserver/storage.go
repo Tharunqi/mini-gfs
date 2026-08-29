@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	pb "github.com/Tharunqi/mini-gfs/internal/pb"
 )
 
 var (
@@ -32,8 +34,8 @@ type ChunkHandle struct {
 	path string
 }
 
-type ChunkServerInfo struct{
-	ID string
+type ChunkServerInfo struct {
+	ID      string
 	Address string
 }
 
@@ -292,4 +294,28 @@ func (s *Storage) loadChunks() error {
 	}
 
 	return nil
+}
+
+func (s *Storage) GetChunkHandles() []*pb.ChunkHandle {
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	handles := make(
+		[]*pb.ChunkHandle,
+		0,
+		len(s.chunks),
+	)
+
+	for chunkID := range s.chunks {
+
+		handles = append(
+			handles,
+			&pb.ChunkHandle{
+				Id: chunkID,
+			},
+		)
+	}
+
+	return handles
 }

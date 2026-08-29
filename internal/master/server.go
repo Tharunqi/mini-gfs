@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	pb "github.com/Tharunqi/mini-gfs/internal/pb"
 )
@@ -148,6 +149,27 @@ func (m *MasterServer) GetChunkLocations(
 		}, nil
 	}
 
+	// Check whether the primary server is currently available.
+	if chunk.Primary == nil {
+		return &pb.GetChunkLocationsResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: "chunk has no primary server",
+			},
+		}, nil
+	}
+
+	if !m.metadata.IsChunkServerAvailable(
+		chunk.Primary.ID,
+	) {
+		return &pb.GetChunkLocationsResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: "chunk server is unavailable",
+			},
+		}, nil
+	}
+
 	location :=
 		chunkLocationFromMetadata(chunk)
 
@@ -275,18 +297,41 @@ func (m *MasterServer) WriteFile(
 			if err != nil {
 				// return error response
 			}
+		}
+		locationResp, err :=
+			m.GetChunkLocations(
+				ctx,
+				&pb.GetChunkLocationsRequest{
+					ChunkHandle: &pb.ChunkHandle{
+						Id:   chunkID,
+						Path: req.Path,
+					},
+				},
+			)
 
-			chunk, err =
-				m.metadata.GetChunkMetadata(chunkID)
+		if err != nil {
+			return &pb.WriteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
 
-			if err != nil {
-				// return error response
-			}
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+
+			return &pb.WriteFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: locationResp.Status.Message,
+				},
+			}, nil
 		}
 
 		locations = append(
 			locations,
-			chunkLocationFromMetadata(chunk),
+			locationResp.Location,
 		)
 	}
 
@@ -351,18 +396,41 @@ func (m *MasterServer) AppendFile(
 			if err != nil {
 				// return error response
 			}
+		}
+		locationResp, err :=
+			m.GetChunkLocations(
+				ctx,
+				&pb.GetChunkLocationsRequest{
+					ChunkHandle: &pb.ChunkHandle{
+						Id:   chunkID,
+						Path: req.Path,
+					},
+				},
+			)
 
-			chunk, err =
-				m.metadata.GetChunkMetadata(chunkID)
+		if err != nil {
+			return &pb.AppendFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: err.Error(),
+				},
+			}, nil
+		}
 
-			if err != nil {
-				// return error response
-			}
+		if locationResp.Status == nil ||
+			!locationResp.Status.Success {
+
+			return &pb.AppendFileResponse{
+				Status: &pb.Status{
+					Success: false,
+					Message: locationResp.Status.Message,
+				},
+			}, nil
 		}
 
 		locations = append(
 			locations,
-			chunkLocationFromMetadata(chunk),
+			locationResp.Location,
 		)
 	}
 	return &pb.AppendFileResponse{
@@ -831,4 +899,63 @@ func chunkLocationFromMetadata(
 	}
 
 	return location
+}
+
+func (m *MasterServer) Heartbeat(
+	ctx context.Context,
+	req *pb.HeartbeatRequest,
+) (*pb.HeartbeatResponse, error) {
+
+	if req.Server == nil {
+		return &pb.HeartbeatResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: "server info is missing",
+			},
+		}, nil
+	}
+
+	m.metadata.UpdateHeartbeat(
+		req.Server,
+		req.Chunks,
+		req.AvailableSpace,
+	)
+
+	fmt.Printf(
+		"Heartbeat: %s, chunks=%d, available=%d\n",
+		req.Server.Id,
+		len(req.Chunks),
+		req.AvailableSpace,
+	)
+
+	return &pb.HeartbeatResponse{
+		Status: &pb.Status{
+			Success: true,
+			Message: "heartbeat received",
+		},
+	}, nil
+}
+
+func (m *MasterServer) StartFailureDetector(
+	ctx context.Context,
+) {
+
+	ticker := time.NewTicker(
+		5 * time.Second,
+	)
+
+	defer ticker.Stop()
+
+	for {
+
+		select {
+
+		case <-ctx.Done():
+			return
+
+		case <-ticker.C:
+
+			m.metadata.CheckChunkServers()
+		}
+	}
 }

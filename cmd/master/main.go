@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -41,6 +42,13 @@ func main() {
 	masterServer := master.NewMasterServer(
 		metadata,
 	)
+
+	ctx, cancel := context.WithCancel(
+		context.Background(),
+	)
+	defer cancel()
+
+	go masterServer.StartFailureDetector(ctx)
 
 	grpcServer := grpc.NewServer()
 

@@ -3,6 +3,8 @@ package chunkserver
 import (
 	"context"
 	"errors"
+	"log"
+	"time"
 
 	pb "github.com/Tharunqi/mini-gfs/internal/pb"
 )
@@ -320,4 +322,83 @@ func (c *ChunkServer) RegisterWithMaster(
 	}
 
 	return nil
+}
+func (c *ChunkServer) sendHeartbeat(
+	ctx context.Context,
+) error {
+
+	chunks :=
+		c.storage.GetChunkHandles()
+
+	resp, err :=
+		c.masterClient.Heartbeat(
+			ctx,
+			&pb.HeartbeatRequest{
+				Server: c.serverInfo,
+
+				Chunks: chunks,
+
+				AvailableSpace: 0,
+			},
+		)
+
+	if err != nil {
+		return err
+	}
+
+	if resp.Status == nil ||
+		!resp.Status.Success {
+
+		if resp.Status != nil {
+			return errors.New(
+				resp.Status.Message,
+			)
+		}
+
+		return errors.New(
+			"heartbeat failed",
+		)
+	}
+
+	return nil
+}
+func (c *ChunkServer) StartHeartbeat(
+	ctx context.Context,
+) {
+
+	// Send one immediately after startup.
+	err := c.sendHeartbeat(ctx)
+
+	if err != nil {
+		log.Printf(
+			"Initial heartbeat failed: %v",
+			err,
+		)
+	}
+
+	ticker := time.NewTicker(
+		5 * time.Second,
+	)
+
+	defer ticker.Stop()
+
+	for {
+
+		select {
+
+		case <-ctx.Done():
+			return
+
+		case <-ticker.C:
+
+			err := c.sendHeartbeat(ctx)
+
+			if err != nil {
+				log.Printf(
+					"Heartbeat failed: %v",
+					err,
+				)
+			}
+		}
+	}
 }

@@ -31,6 +31,7 @@ const (
 	MasterService_TruncateFile_FullMethodName         = "/gfs.MasterService/TruncateFile"
 	MasterService_InsertFile_FullMethodName           = "/gfs.MasterService/InsertFile"
 	MasterService_RegisterChunkServer_FullMethodName  = "/gfs.MasterService/RegisterChunkServer"
+	MasterService_Heartbeat_FullMethodName            = "/gfs.MasterService/Heartbeat"
 )
 
 // MasterServiceClient is the client API for MasterService service.
@@ -49,6 +50,7 @@ type MasterServiceClient interface {
 	TruncateFile(ctx context.Context, in *TruncateFileRequest, opts ...grpc.CallOption) (*TruncateFileResponse, error)
 	InsertFile(ctx context.Context, in *InsertFileRequest, opts ...grpc.CallOption) (*InsertFileResponse, error)
 	RegisterChunkServer(ctx context.Context, in *RegisterChunkServerRequest, opts ...grpc.CallOption) (*RegisterChunkServerResponse, error)
+	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
 }
 
 type masterServiceClient struct {
@@ -179,6 +181,16 @@ func (c *masterServiceClient) RegisterChunkServer(ctx context.Context, in *Regis
 	return out, nil
 }
 
+func (c *masterServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HeartbeatResponse)
+	err := c.cc.Invoke(ctx, MasterService_Heartbeat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MasterServiceServer is the server API for MasterService service.
 // All implementations must embed UnimplementedMasterServiceServer
 // for forward compatibility.
@@ -195,6 +207,7 @@ type MasterServiceServer interface {
 	TruncateFile(context.Context, *TruncateFileRequest) (*TruncateFileResponse, error)
 	InsertFile(context.Context, *InsertFileRequest) (*InsertFileResponse, error)
 	RegisterChunkServer(context.Context, *RegisterChunkServerRequest) (*RegisterChunkServerResponse, error)
+	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
 	mustEmbedUnimplementedMasterServiceServer()
 }
 
@@ -240,6 +253,9 @@ func (UnimplementedMasterServiceServer) InsertFile(context.Context, *InsertFileR
 }
 func (UnimplementedMasterServiceServer) RegisterChunkServer(context.Context, *RegisterChunkServerRequest) (*RegisterChunkServerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterChunkServer not implemented")
+}
+func (UnimplementedMasterServiceServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Heartbeat not implemented")
 }
 func (UnimplementedMasterServiceServer) mustEmbedUnimplementedMasterServiceServer() {}
 func (UnimplementedMasterServiceServer) testEmbeddedByValue()                       {}
@@ -478,6 +494,24 @@ func _MasterService_RegisterChunkServer_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MasterService_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HeartbeatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).Heartbeat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MasterService_Heartbeat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).Heartbeat(ctx, req.(*HeartbeatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MasterService_ServiceDesc is the grpc.ServiceDesc for MasterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -532,6 +566,10 @@ var MasterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterChunkServer",
 			Handler:    _MasterService_RegisterChunkServer_Handler,
+		},
+		{
+			MethodName: "Heartbeat",
+			Handler:    _MasterService_Heartbeat_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

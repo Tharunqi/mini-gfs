@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/Tharunqi/mini-gfs/internal/config"
+	pb "github.com/Tharunqi/mini-gfs/internal/pb"
 )
 
 var (
@@ -25,6 +27,10 @@ type ChunkServerInfo struct {
 	ID   string
 	Host string
 	Port uint32
+
+	LastHeartbeat  int64
+	Chunks         []uint64
+	AvailableSpace uint64
 }
 
 type ChunkMetadata struct {
@@ -47,23 +53,25 @@ type persistentMetadata struct {
 }
 
 type MetadataStore struct {
-	mu             sync.RWMutex
-	files          map[string]*FileMetadata
-	chunkid        uint64
-	dataPath       string
-	chunkServers   map[string]*ChunkServerInfo
-	chunkLocations map[uint64]*ChunkMetadata
-	nextServer     uint64
+	mu              sync.RWMutex
+	files           map[string]*FileMetadata
+	chunkid         uint64
+	dataPath        string
+	allChunkServers map[string]*ChunkServerInfo
+	chunkServers    map[string]*ChunkServerInfo
+	chunkLocations  map[uint64]*ChunkMetadata
+	nextServer      uint64
 }
 
 func NewMetadataStore() *MetadataStore {
 	return &MetadataStore{
-		files:          make(map[string]*FileMetadata),
-		chunkid:        1,
-		dataPath:       "metadata.json",
-		chunkServers:   make(map[string]*ChunkServerInfo),
-		chunkLocations: make(map[uint64]*ChunkMetadata),
-		nextServer:     0,
+		files:           make(map[string]*FileMetadata),
+		chunkid:         1,
+		dataPath:        "metadata.json",
+		chunkServers:    make(map[string]*ChunkServerInfo),
+		chunkLocations:  make(map[uint64]*ChunkMetadata),
+		allChunkServers: make(map[string]*ChunkServerInfo),
+		nextServer:      0,
 	}
 }
 
@@ -624,11 +632,22 @@ func (m *MetadataStore) RegisterChunkServer(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.chunkServers[id] = &ChunkServerInfo{
+	server := &ChunkServerInfo{
 		ID:   id,
 		Host: host,
 		Port: port,
+
+		LastHeartbeat: time.Now().Unix(),
+		Chunks:        []uint64{},
+
+		AvailableSpace: 0,
 	}
+
+	// Remember this server permanently.
+	m.allChunkServers[id] = server
+
+	// Mark it currently available.
+	m.chunkServers[id] = server
 }
 
 func (m *MetadataStore) GetChunkMetadata(
@@ -699,4 +718,95 @@ func (m *MetadataStore) DeleteChunkMetadata(
 	defer m.mu.Unlock()
 
 	delete(m.chunkLocations, chunkID)
+}
+
+func (m *MetadataStore) UpdateHeartbeat(
+	server *pb.ServerInfo,
+	chunks []*pb.ChunkHandle,
+	availableSpace uint64,
+) {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	info, exists :=
+		m.chunkServers[server.Id]
+
+	if !exists {
+		// Server may have restarted or Master may have
+		// started after the server.
+		info = &ChunkServerInfo{
+			ID:   server.Id,
+			Host: server.Host,
+			Port: server.Port,
+		}
+
+		m.chunkServers[server.Id] = info
+	}
+
+	info.Host = server.Host
+	info.Port = server.Port
+
+	info.LastHeartbeat = time.Now().Unix()
+
+	info.AvailableSpace = availableSpace
+
+	info.Chunks = make(
+		[]uint64,
+		0,
+		len(chunks),
+	)
+
+	for _, chunk := range chunks {
+		info.Chunks = append(
+			info.Chunks,
+			chunk.Id,
+		)
+	}
+}
+
+func (m *MetadataStore) CheckChunkServers() {
+
+	const heartbeatInterval = 5 * time.Second
+	const missedHeartbeats = 3
+
+	timeout :=
+		heartbeatInterval * missedHeartbeats
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for id, server := range m.chunkServers {
+
+		lastHeartbeat :=
+			time.Unix(
+				server.LastHeartbeat,
+				0,
+			)
+
+		if time.Since(lastHeartbeat) > timeout {
+
+			fmt.Printf(
+				"ChunkServer %s missed 3 heartbeats. Marking unavailable.\n",
+				id,
+			)
+
+			delete(
+				m.chunkServers,
+				id,
+			)
+		}
+	}
+}
+func (m *MetadataStore) IsChunkServerAvailable(
+	id string,
+) bool {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	_, exists :=
+		m.chunkServers[id]
+
+	return exists
 }
