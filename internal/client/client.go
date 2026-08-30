@@ -333,6 +333,7 @@ func (c *Client) Write(
 					ChunkHandle: location.Handle,
 					Offset:      chunkOffset,
 					Data:        data[dataOffset : dataOffset+writeLength],
+					Replicas:    location.Replicas,
 				},
 			)
 
@@ -424,6 +425,7 @@ func (c *Client) Append(
 					ChunkHandle: location.Handle,
 					Offset:      chunkOffset,
 					Data:        data[dataOffset : dataOffset+writeLength],
+					Replicas:    location.Replicas,
 				},
 			)
 
@@ -691,6 +693,7 @@ func (c *Client) DeleteRange(
 					ChunkHandle: location.Handle,
 					Offset:      0,
 					Data:        buffer[dataOffset:end],
+					Replicas:    location.Replicas,
 				},
 			)
 
@@ -1220,6 +1223,7 @@ func (c *Client) Insert(
 					ChunkHandle: location.Handle,
 					Offset:      0,
 					Data:        chunkData,
+					Replicas:    location.Replicas,
 				},
 			)
 

@@ -14,6 +14,8 @@ message WriteChunkRequest {
 
     // Data to write
     bytes data = 3;
+
+    repeated ServerInfo replicas = 4;
 }
 
 message WriteChunkResponse {
@@ -53,6 +55,34 @@ message TruncateChunkResponse{
     Status status = 1;
 }
 
+message ReplicateChunkRequest {
+    ChunkHandle chunk_handle = 1;
+
+    ServerInfo destination = 2;
+}
+
+message ReplicateChunkResponse {
+    Status status = 1;
+}
+
+message ForwardWriteRequest {
+    ChunkHandle chunk_handle = 1;
+    uint64 offset = 2;
+    bytes data = 3;
+}
+
+message ForwardWriteResponse {
+    Status status = 1;
+}
+
+message DeleteReplicaChunkRequest {
+    ChunkHandle chunk_handle = 1;
+}
+
+message DeleteReplicaChunkResponse {
+    Status status = 1;
+}
+
 service ChunkService {
 
     rpc WriteChunk(WriteChunkRequest)
@@ -65,4 +95,10 @@ service ChunkService {
         returns (DeleteChunkResponse);
 
     rpc TruncateChunk(TruncateChunkRequest) returns (TruncateChunkResponse);
+
+    rpc ReplicateChunk(ReplicateChunkRequest) returns (ReplicateChunkResponse);
+
+    rpc ForwardWrite(ForwardWriteRequest) returns (ForwardWriteResponse);
+
+    rpc DeleteReplicaChunk(DeleteReplicaChunkRequest) returns (DeleteReplicaChunkResponse);
 }

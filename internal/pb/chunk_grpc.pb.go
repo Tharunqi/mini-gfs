@@ -19,10 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChunkService_WriteChunk_FullMethodName    = "/gfs.ChunkService/WriteChunk"
-	ChunkService_ReadChunk_FullMethodName     = "/gfs.ChunkService/ReadChunk"
-	ChunkService_DeleteChunk_FullMethodName   = "/gfs.ChunkService/DeleteChunk"
-	ChunkService_TruncateChunk_FullMethodName = "/gfs.ChunkService/TruncateChunk"
+	ChunkService_WriteChunk_FullMethodName         = "/gfs.ChunkService/WriteChunk"
+	ChunkService_ReadChunk_FullMethodName          = "/gfs.ChunkService/ReadChunk"
+	ChunkService_DeleteChunk_FullMethodName        = "/gfs.ChunkService/DeleteChunk"
+	ChunkService_TruncateChunk_FullMethodName      = "/gfs.ChunkService/TruncateChunk"
+	ChunkService_ReplicateChunk_FullMethodName     = "/gfs.ChunkService/ReplicateChunk"
+	ChunkService_ForwardWrite_FullMethodName       = "/gfs.ChunkService/ForwardWrite"
+	ChunkService_DeleteReplicaChunk_FullMethodName = "/gfs.ChunkService/DeleteReplicaChunk"
 )
 
 // ChunkServiceClient is the client API for ChunkService service.
@@ -33,6 +36,9 @@ type ChunkServiceClient interface {
 	ReadChunk(ctx context.Context, in *ReadChunkRequest, opts ...grpc.CallOption) (*ReadChunkResponse, error)
 	DeleteChunk(ctx context.Context, in *DeleteChunkRequest, opts ...grpc.CallOption) (*DeleteChunkResponse, error)
 	TruncateChunk(ctx context.Context, in *TruncateChunkRequest, opts ...grpc.CallOption) (*TruncateChunkResponse, error)
+	ReplicateChunk(ctx context.Context, in *ReplicateChunkRequest, opts ...grpc.CallOption) (*ReplicateChunkResponse, error)
+	ForwardWrite(ctx context.Context, in *ForwardWriteRequest, opts ...grpc.CallOption) (*ForwardWriteResponse, error)
+	DeleteReplicaChunk(ctx context.Context, in *DeleteReplicaChunkRequest, opts ...grpc.CallOption) (*DeleteReplicaChunkResponse, error)
 }
 
 type chunkServiceClient struct {
@@ -83,6 +89,36 @@ func (c *chunkServiceClient) TruncateChunk(ctx context.Context, in *TruncateChun
 	return out, nil
 }
 
+func (c *chunkServiceClient) ReplicateChunk(ctx context.Context, in *ReplicateChunkRequest, opts ...grpc.CallOption) (*ReplicateChunkResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplicateChunkResponse)
+	err := c.cc.Invoke(ctx, ChunkService_ReplicateChunk_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chunkServiceClient) ForwardWrite(ctx context.Context, in *ForwardWriteRequest, opts ...grpc.CallOption) (*ForwardWriteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ForwardWriteResponse)
+	err := c.cc.Invoke(ctx, ChunkService_ForwardWrite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chunkServiceClient) DeleteReplicaChunk(ctx context.Context, in *DeleteReplicaChunkRequest, opts ...grpc.CallOption) (*DeleteReplicaChunkResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteReplicaChunkResponse)
+	err := c.cc.Invoke(ctx, ChunkService_DeleteReplicaChunk_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChunkServiceServer is the server API for ChunkService service.
 // All implementations must embed UnimplementedChunkServiceServer
 // for forward compatibility.
@@ -91,6 +127,9 @@ type ChunkServiceServer interface {
 	ReadChunk(context.Context, *ReadChunkRequest) (*ReadChunkResponse, error)
 	DeleteChunk(context.Context, *DeleteChunkRequest) (*DeleteChunkResponse, error)
 	TruncateChunk(context.Context, *TruncateChunkRequest) (*TruncateChunkResponse, error)
+	ReplicateChunk(context.Context, *ReplicateChunkRequest) (*ReplicateChunkResponse, error)
+	ForwardWrite(context.Context, *ForwardWriteRequest) (*ForwardWriteResponse, error)
+	DeleteReplicaChunk(context.Context, *DeleteReplicaChunkRequest) (*DeleteReplicaChunkResponse, error)
 	mustEmbedUnimplementedChunkServiceServer()
 }
 
@@ -112,6 +151,15 @@ func (UnimplementedChunkServiceServer) DeleteChunk(context.Context, *DeleteChunk
 }
 func (UnimplementedChunkServiceServer) TruncateChunk(context.Context, *TruncateChunkRequest) (*TruncateChunkResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TruncateChunk not implemented")
+}
+func (UnimplementedChunkServiceServer) ReplicateChunk(context.Context, *ReplicateChunkRequest) (*ReplicateChunkResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReplicateChunk not implemented")
+}
+func (UnimplementedChunkServiceServer) ForwardWrite(context.Context, *ForwardWriteRequest) (*ForwardWriteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ForwardWrite not implemented")
+}
+func (UnimplementedChunkServiceServer) DeleteReplicaChunk(context.Context, *DeleteReplicaChunkRequest) (*DeleteReplicaChunkResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteReplicaChunk not implemented")
 }
 func (UnimplementedChunkServiceServer) mustEmbedUnimplementedChunkServiceServer() {}
 func (UnimplementedChunkServiceServer) testEmbeddedByValue()                      {}
@@ -206,6 +254,60 @@ func _ChunkService_TruncateChunk_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChunkService_ReplicateChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplicateChunkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChunkServiceServer).ReplicateChunk(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChunkService_ReplicateChunk_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChunkServiceServer).ReplicateChunk(ctx, req.(*ReplicateChunkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChunkService_ForwardWrite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForwardWriteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChunkServiceServer).ForwardWrite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChunkService_ForwardWrite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChunkServiceServer).ForwardWrite(ctx, req.(*ForwardWriteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChunkService_DeleteReplicaChunk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteReplicaChunkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChunkServiceServer).DeleteReplicaChunk(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChunkService_DeleteReplicaChunk_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChunkServiceServer).DeleteReplicaChunk(ctx, req.(*DeleteReplicaChunkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChunkService_ServiceDesc is the grpc.ServiceDesc for ChunkService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +330,18 @@ var ChunkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TruncateChunk",
 			Handler:    _ChunkService_TruncateChunk_Handler,
+		},
+		{
+			MethodName: "ReplicateChunk",
+			Handler:    _ChunkService_ReplicateChunk_Handler,
+		},
+		{
+			MethodName: "ForwardWrite",
+			Handler:    _ChunkService_ForwardWrite_Handler,
+		},
+		{
+			MethodName: "DeleteReplicaChunk",
+			Handler:    _ChunkService_DeleteReplicaChunk_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

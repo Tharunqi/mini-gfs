@@ -687,28 +687,40 @@ func (m *MetadataStore) SetChunkPrimary(
 	return nil
 }
 
-func (m *MetadataStore) AllocateChunkServer() (*ChunkServerInfo, error) {
+func (m *MetadataStore) AllocateChunkServer(
+	count int,
+) ([]*ChunkServerInfo, error) {
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	if len(m.chunkServers) == 0 {
-		return nil, errors.New(
-			"no chunk servers available",
+	if len(m.chunkServers) < count {
+		return nil, fmt.Errorf(
+			"not enough available chunk servers: need %d, have %d",
+			count,
+			len(m.chunkServers),
 		)
 	}
 
-	servers := make([]*ChunkServerInfo, 0, len(m.chunkServers))
+	servers := make(
+		[]*ChunkServerInfo,
+		0,
+		count,
+	)
 
 	for _, server := range m.chunkServers {
-		servers = append(servers, server)
+
+		servers = append(
+			servers,
+			server,
+		)
+
+		if len(servers) == count {
+			break
+		}
 	}
 
-	server := servers[m.nextServer%uint64(len(servers))]
-
-	m.nextServer++
-
-	return server, nil
+	return servers, nil
 }
 
 func (m *MetadataStore) DeleteChunkMetadata(
@@ -809,4 +821,26 @@ func (m *MetadataStore) IsChunkServerAvailable(
 		m.chunkServers[id]
 
 	return exists
+}
+
+func (m *MetadataStore) SetChunkReplica(
+	chunkID uint64,
+	server *ChunkServerInfo,
+) error {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	chunk, exists := m.chunkLocations[chunkID]
+
+	if !exists {
+		return errors.New("chunk not found")
+	}
+
+	append(
+		chunk.Replicas,
+		server,
+	)
+
+	return nil
 }

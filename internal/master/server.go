@@ -196,7 +196,10 @@ func (m *MasterServer) AllocateChunk(
 			},
 		}, nil
 	}
-	server, err := m.metadata.AllocateChunkServer()
+	server, err := m.metadata.AllocateChunkServer(3)
+	primary := server[0]
+	replica1 := server[1]
+	replica2 := server[2]
 
 	if err != nil {
 		return &pb.AllocateChunkResponse{
@@ -209,28 +212,60 @@ func (m *MasterServer) AllocateChunk(
 
 	err = m.metadata.SetChunkPrimary(
 		chunkHandle,
-		server,
+		primary,
+	)
+	if err != nil {
+		return &pb.AllocateChunkResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+	err = m.metadata.SetChunkReplica(
+		chunkHandle,
+		replica1,
 	)
 
-	location := &pb.ChunkLocation{
-		Handle: &pb.ChunkHandle{
-			Id:   chunkHandle,
-			Path: req.Path,
-		},
-		Primary: &pb.ServerInfo{
-			Id:   server.ID,
-			Host: server.Host,
-			Port: server.Port,
-		},
-		Replicas: []*pb.ServerInfo{},
+	if err != nil {
+		return &pb.AllocateChunkResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
 	}
 
+	err = m.metadata.SetChunkReplica(
+		chunkHandle,
+		replica2,
+	)
+
+	if err != nil {
+		return &pb.AllocateChunkResponse{
+			Status: &pb.Status{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	locationResp, err :=
+		m.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: &pb.ChunkHandle{
+					Id:   chunkHandle,
+					Path: req.Path,
+				},
+			},
+		)
 	return &pb.AllocateChunkResponse{
 		Status: &pb.Status{
 			Success: true,
 			Message: "chunk allocated successfully",
 		},
-		Location: location,
+		Location: locationResp.Location,
 	}, nil
 }
 
@@ -283,19 +318,55 @@ func (m *MasterServer) WriteFile(
 		if chunk.Primary == nil {
 
 			server, err :=
-				m.metadata.AllocateChunkServer()
+				m.metadata.AllocateChunkServer(3)
 
 			if err != nil {
 				// return error response
 			}
 
+			primary := server[0]
+			replica1 := server[1]
+			replica2 := server[2]
+
 			err = m.metadata.SetChunkPrimary(
 				chunkID,
-				server,
+				primary,
 			)
 
 			if err != nil {
-				// return error response
+				return &pb.WriteFileResponse{
+					Status: &pb.Status{
+						Success: false,
+						Message: err.Error(),
+					},
+				}, nil
+			}
+			err = m.metadata.SetChunkReplica(
+				chunkID,
+				replica1,
+			)
+
+			if err != nil {
+				return &pb.WriteFileResponse{
+					Status: &pb.Status{
+						Success: false,
+						Message: err.Error(),
+					},
+				}, nil
+			}
+
+			err = m.metadata.SetChunkReplica(
+				chunkID,
+				replica2,
+			)
+
+			if err != nil {
+				return &pb.WriteFileResponse{
+					Status: &pb.Status{
+						Success: false,
+						Message: err.Error(),
+					},
+				}, nil
 			}
 		}
 		locationResp, err :=
@@ -382,19 +453,55 @@ func (m *MasterServer) AppendFile(
 		if chunk.Primary == nil {
 
 			server, err :=
-				m.metadata.AllocateChunkServer()
+				m.metadata.AllocateChunkServer(3)
 
 			if err != nil {
 				// return error response
 			}
 
+			primary := server[0]
+			replica1 := server[1]
+			replica2 := server[2]
+
 			err = m.metadata.SetChunkPrimary(
 				chunkID,
-				server,
+				primary,
 			)
 
 			if err != nil {
-				// return error response
+				return &pb.AppendFileResponse{
+					Status: &pb.Status{
+						Success: false,
+						Message: err.Error(),
+					},
+				}, nil
+			}
+			err = m.metadata.SetChunkReplica(
+				chunkID,
+				replica1,
+			)
+
+			if err != nil {
+				return &pb.AppendFileResponse{
+					Status: &pb.Status{
+						Success: false,
+						Message: err.Error(),
+					},
+				}, nil
+			}
+
+			err = m.metadata.SetChunkReplica(
+				chunkID,
+				replica2,
+			)
+
+			if err != nil {
+				return &pb.AppendFileResponse{
+					Status: &pb.Status{
+						Success: false,
+						Message: err.Error(),
+					},
+				}, nil
 			}
 		}
 		locationResp, err :=

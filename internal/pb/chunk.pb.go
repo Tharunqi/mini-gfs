@@ -27,7 +27,8 @@ type WriteChunkRequest struct {
 	// Byte offset within the chunk
 	Offset uint64 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
 	// Data to write
-	Data          []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	Data          []byte        `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	Replicas      []*ServerInfo `protobuf:"bytes,4,rep,name=replicas,proto3" json:"replicas,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -79,6 +80,13 @@ func (x *WriteChunkRequest) GetOffset() uint64 {
 func (x *WriteChunkRequest) GetData() []byte {
 	if x != nil {
 		return x.Data
+	}
+	return nil
+}
+
+func (x *WriteChunkRequest) GetReplicas() []*ServerInfo {
+	if x != nil {
+		return x.Replicas
 	}
 	return nil
 }
@@ -425,15 +433,304 @@ func (x *TruncateChunkResponse) GetStatus() *Status {
 	return nil
 }
 
+type ReplicateChunkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChunkHandle   *ChunkHandle           `protobuf:"bytes,1,opt,name=chunk_handle,json=chunkHandle,proto3" json:"chunk_handle,omitempty"`
+	Destination   *ServerInfo            `protobuf:"bytes,2,opt,name=destination,proto3" json:"destination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplicateChunkRequest) Reset() {
+	*x = ReplicateChunkRequest{}
+	mi := &file_chunk_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplicateChunkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplicateChunkRequest) ProtoMessage() {}
+
+func (x *ReplicateChunkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplicateChunkRequest.ProtoReflect.Descriptor instead.
+func (*ReplicateChunkRequest) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ReplicateChunkRequest) GetChunkHandle() *ChunkHandle {
+	if x != nil {
+		return x.ChunkHandle
+	}
+	return nil
+}
+
+func (x *ReplicateChunkRequest) GetDestination() *ServerInfo {
+	if x != nil {
+		return x.Destination
+	}
+	return nil
+}
+
+type ReplicateChunkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplicateChunkResponse) Reset() {
+	*x = ReplicateChunkResponse{}
+	mi := &file_chunk_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplicateChunkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplicateChunkResponse) ProtoMessage() {}
+
+func (x *ReplicateChunkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplicateChunkResponse.ProtoReflect.Descriptor instead.
+func (*ReplicateChunkResponse) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ReplicateChunkResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+type ForwardWriteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChunkHandle   *ChunkHandle           `protobuf:"bytes,1,opt,name=chunk_handle,json=chunkHandle,proto3" json:"chunk_handle,omitempty"`
+	Offset        uint64                 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	Data          []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ForwardWriteRequest) Reset() {
+	*x = ForwardWriteRequest{}
+	mi := &file_chunk_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForwardWriteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForwardWriteRequest) ProtoMessage() {}
+
+func (x *ForwardWriteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForwardWriteRequest.ProtoReflect.Descriptor instead.
+func (*ForwardWriteRequest) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ForwardWriteRequest) GetChunkHandle() *ChunkHandle {
+	if x != nil {
+		return x.ChunkHandle
+	}
+	return nil
+}
+
+func (x *ForwardWriteRequest) GetOffset() uint64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *ForwardWriteRequest) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type ForwardWriteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ForwardWriteResponse) Reset() {
+	*x = ForwardWriteResponse{}
+	mi := &file_chunk_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForwardWriteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForwardWriteResponse) ProtoMessage() {}
+
+func (x *ForwardWriteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForwardWriteResponse.ProtoReflect.Descriptor instead.
+func (*ForwardWriteResponse) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ForwardWriteResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+type DeleteReplicaChunkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChunkHandle   *ChunkHandle           `protobuf:"bytes,1,opt,name=chunk_handle,json=chunkHandle,proto3" json:"chunk_handle,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteReplicaChunkRequest) Reset() {
+	*x = DeleteReplicaChunkRequest{}
+	mi := &file_chunk_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteReplicaChunkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteReplicaChunkRequest) ProtoMessage() {}
+
+func (x *DeleteReplicaChunkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteReplicaChunkRequest.ProtoReflect.Descriptor instead.
+func (*DeleteReplicaChunkRequest) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DeleteReplicaChunkRequest) GetChunkHandle() *ChunkHandle {
+	if x != nil {
+		return x.ChunkHandle
+	}
+	return nil
+}
+
+type DeleteReplicaChunkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *Status                `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteReplicaChunkResponse) Reset() {
+	*x = DeleteReplicaChunkResponse{}
+	mi := &file_chunk_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteReplicaChunkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteReplicaChunkResponse) ProtoMessage() {}
+
+func (x *DeleteReplicaChunkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_chunk_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteReplicaChunkResponse.ProtoReflect.Descriptor instead.
+func (*DeleteReplicaChunkResponse) Descriptor() ([]byte, []int) {
+	return file_chunk_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *DeleteReplicaChunkResponse) GetStatus() *Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 var File_chunk_proto protoreflect.FileDescriptor
 
 const file_chunk_proto_rawDesc = "" +
 	"\n" +
-	"\vchunk.proto\x12\x03gfs\x1a\fcommon.proto\"t\n" +
+	"\vchunk.proto\x12\x03gfs\x1a\fcommon.proto\"\xa1\x01\n" +
 	"\x11WriteChunkRequest\x123\n" +
 	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\x12\x16\n" +
 	"\x06offset\x18\x02 \x01(\x04R\x06offset\x12\x12\n" +
-	"\x04data\x18\x03 \x01(\fR\x04data\"9\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\x12+\n" +
+	"\breplicas\x18\x04 \x03(\v2\x0f.gfs.ServerInfoR\breplicas\"9\n" +
 	"\x12WriteChunkResponse\x12#\n" +
 	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"w\n" +
 	"\x10ReadChunkRequest\x123\n" +
@@ -451,13 +748,31 @@ const file_chunk_proto_rawDesc = "" +
 	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\x12\x12\n" +
 	"\x04size\x18\x02 \x01(\x04R\x04size\"<\n" +
 	"\x15TruncateChunkResponse\x12#\n" +
-	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status2\x93\x02\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"\x7f\n" +
+	"\x15ReplicateChunkRequest\x123\n" +
+	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\x121\n" +
+	"\vdestination\x18\x02 \x01(\v2\x0f.gfs.ServerInfoR\vdestination\"=\n" +
+	"\x16ReplicateChunkResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"v\n" +
+	"\x13ForwardWriteRequest\x123\n" +
+	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x04R\x06offset\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\";\n" +
+	"\x14ForwardWriteResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"P\n" +
+	"\x19DeleteReplicaChunkRequest\x123\n" +
+	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\"A\n" +
+	"\x1aDeleteReplicaChunkResponse\x12#\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status2\xfa\x03\n" +
 	"\fChunkService\x12=\n" +
 	"\n" +
 	"WriteChunk\x12\x16.gfs.WriteChunkRequest\x1a\x17.gfs.WriteChunkResponse\x12:\n" +
 	"\tReadChunk\x12\x15.gfs.ReadChunkRequest\x1a\x16.gfs.ReadChunkResponse\x12@\n" +
 	"\vDeleteChunk\x12\x17.gfs.DeleteChunkRequest\x1a\x18.gfs.DeleteChunkResponse\x12F\n" +
-	"\rTruncateChunk\x12\x19.gfs.TruncateChunkRequest\x1a\x1a.gfs.TruncateChunkResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
+	"\rTruncateChunk\x12\x19.gfs.TruncateChunkRequest\x1a\x1a.gfs.TruncateChunkResponse\x12I\n" +
+	"\x0eReplicateChunk\x12\x1a.gfs.ReplicateChunkRequest\x1a\x1b.gfs.ReplicateChunkResponse\x12C\n" +
+	"\fForwardWrite\x12\x18.gfs.ForwardWriteRequest\x1a\x19.gfs.ForwardWriteResponse\x12U\n" +
+	"\x12DeleteReplicaChunk\x12\x1e.gfs.DeleteReplicaChunkRequest\x1a\x1f.gfs.DeleteReplicaChunkResponseB*Z(github.com/Tharunqi/mini-gfs/internal/pbb\x06proto3"
 
 var (
 	file_chunk_proto_rawDescOnce sync.Once
@@ -471,41 +786,62 @@ func file_chunk_proto_rawDescGZIP() []byte {
 	return file_chunk_proto_rawDescData
 }
 
-var file_chunk_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_chunk_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_chunk_proto_goTypes = []any{
-	(*WriteChunkRequest)(nil),     // 0: gfs.WriteChunkRequest
-	(*WriteChunkResponse)(nil),    // 1: gfs.WriteChunkResponse
-	(*ReadChunkRequest)(nil),      // 2: gfs.ReadChunkRequest
-	(*ReadChunkResponse)(nil),     // 3: gfs.ReadChunkResponse
-	(*DeleteChunkRequest)(nil),    // 4: gfs.DeleteChunkRequest
-	(*DeleteChunkResponse)(nil),   // 5: gfs.DeleteChunkResponse
-	(*TruncateChunkRequest)(nil),  // 6: gfs.TruncateChunkRequest
-	(*TruncateChunkResponse)(nil), // 7: gfs.TruncateChunkResponse
-	(*ChunkHandle)(nil),           // 8: gfs.ChunkHandle
-	(*Status)(nil),                // 9: gfs.Status
+	(*WriteChunkRequest)(nil),          // 0: gfs.WriteChunkRequest
+	(*WriteChunkResponse)(nil),         // 1: gfs.WriteChunkResponse
+	(*ReadChunkRequest)(nil),           // 2: gfs.ReadChunkRequest
+	(*ReadChunkResponse)(nil),          // 3: gfs.ReadChunkResponse
+	(*DeleteChunkRequest)(nil),         // 4: gfs.DeleteChunkRequest
+	(*DeleteChunkResponse)(nil),        // 5: gfs.DeleteChunkResponse
+	(*TruncateChunkRequest)(nil),       // 6: gfs.TruncateChunkRequest
+	(*TruncateChunkResponse)(nil),      // 7: gfs.TruncateChunkResponse
+	(*ReplicateChunkRequest)(nil),      // 8: gfs.ReplicateChunkRequest
+	(*ReplicateChunkResponse)(nil),     // 9: gfs.ReplicateChunkResponse
+	(*ForwardWriteRequest)(nil),        // 10: gfs.ForwardWriteRequest
+	(*ForwardWriteResponse)(nil),       // 11: gfs.ForwardWriteResponse
+	(*DeleteReplicaChunkRequest)(nil),  // 12: gfs.DeleteReplicaChunkRequest
+	(*DeleteReplicaChunkResponse)(nil), // 13: gfs.DeleteReplicaChunkResponse
+	(*ChunkHandle)(nil),                // 14: gfs.ChunkHandle
+	(*ServerInfo)(nil),                 // 15: gfs.ServerInfo
+	(*Status)(nil),                     // 16: gfs.Status
 }
 var file_chunk_proto_depIdxs = []int32{
-	8,  // 0: gfs.WriteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	9,  // 1: gfs.WriteChunkResponse.status:type_name -> gfs.Status
-	8,  // 2: gfs.ReadChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	9,  // 3: gfs.ReadChunkResponse.status:type_name -> gfs.Status
-	8,  // 4: gfs.DeleteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	9,  // 5: gfs.DeleteChunkResponse.status:type_name -> gfs.Status
-	8,  // 6: gfs.TruncateChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
-	9,  // 7: gfs.TruncateChunkResponse.status:type_name -> gfs.Status
-	0,  // 8: gfs.ChunkService.WriteChunk:input_type -> gfs.WriteChunkRequest
-	2,  // 9: gfs.ChunkService.ReadChunk:input_type -> gfs.ReadChunkRequest
-	4,  // 10: gfs.ChunkService.DeleteChunk:input_type -> gfs.DeleteChunkRequest
-	6,  // 11: gfs.ChunkService.TruncateChunk:input_type -> gfs.TruncateChunkRequest
-	1,  // 12: gfs.ChunkService.WriteChunk:output_type -> gfs.WriteChunkResponse
-	3,  // 13: gfs.ChunkService.ReadChunk:output_type -> gfs.ReadChunkResponse
-	5,  // 14: gfs.ChunkService.DeleteChunk:output_type -> gfs.DeleteChunkResponse
-	7,  // 15: gfs.ChunkService.TruncateChunk:output_type -> gfs.TruncateChunkResponse
-	12, // [12:16] is the sub-list for method output_type
-	8,  // [8:12] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	14, // 0: gfs.WriteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	15, // 1: gfs.WriteChunkRequest.replicas:type_name -> gfs.ServerInfo
+	16, // 2: gfs.WriteChunkResponse.status:type_name -> gfs.Status
+	14, // 3: gfs.ReadChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	16, // 4: gfs.ReadChunkResponse.status:type_name -> gfs.Status
+	14, // 5: gfs.DeleteChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	16, // 6: gfs.DeleteChunkResponse.status:type_name -> gfs.Status
+	14, // 7: gfs.TruncateChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	16, // 8: gfs.TruncateChunkResponse.status:type_name -> gfs.Status
+	14, // 9: gfs.ReplicateChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	15, // 10: gfs.ReplicateChunkRequest.destination:type_name -> gfs.ServerInfo
+	16, // 11: gfs.ReplicateChunkResponse.status:type_name -> gfs.Status
+	14, // 12: gfs.ForwardWriteRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	16, // 13: gfs.ForwardWriteResponse.status:type_name -> gfs.Status
+	14, // 14: gfs.DeleteReplicaChunkRequest.chunk_handle:type_name -> gfs.ChunkHandle
+	16, // 15: gfs.DeleteReplicaChunkResponse.status:type_name -> gfs.Status
+	0,  // 16: gfs.ChunkService.WriteChunk:input_type -> gfs.WriteChunkRequest
+	2,  // 17: gfs.ChunkService.ReadChunk:input_type -> gfs.ReadChunkRequest
+	4,  // 18: gfs.ChunkService.DeleteChunk:input_type -> gfs.DeleteChunkRequest
+	6,  // 19: gfs.ChunkService.TruncateChunk:input_type -> gfs.TruncateChunkRequest
+	8,  // 20: gfs.ChunkService.ReplicateChunk:input_type -> gfs.ReplicateChunkRequest
+	10, // 21: gfs.ChunkService.ForwardWrite:input_type -> gfs.ForwardWriteRequest
+	12, // 22: gfs.ChunkService.DeleteReplicaChunk:input_type -> gfs.DeleteReplicaChunkRequest
+	1,  // 23: gfs.ChunkService.WriteChunk:output_type -> gfs.WriteChunkResponse
+	3,  // 24: gfs.ChunkService.ReadChunk:output_type -> gfs.ReadChunkResponse
+	5,  // 25: gfs.ChunkService.DeleteChunk:output_type -> gfs.DeleteChunkResponse
+	7,  // 26: gfs.ChunkService.TruncateChunk:output_type -> gfs.TruncateChunkResponse
+	9,  // 27: gfs.ChunkService.ReplicateChunk:output_type -> gfs.ReplicateChunkResponse
+	11, // 28: gfs.ChunkService.ForwardWrite:output_type -> gfs.ForwardWriteResponse
+	13, // 29: gfs.ChunkService.DeleteReplicaChunk:output_type -> gfs.DeleteReplicaChunkResponse
+	23, // [23:30] is the sub-list for method output_type
+	16, // [16:23] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_chunk_proto_init() }
@@ -520,7 +856,7 @@ func file_chunk_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chunk_proto_rawDesc), len(file_chunk_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
