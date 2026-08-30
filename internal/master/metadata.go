@@ -837,7 +837,7 @@ func (m *MetadataStore) SetChunkReplica(
 		return errors.New("chunk not found")
 	}
 
-	append(
+	chunk.Replicas = append(
 		chunk.Replicas,
 		server,
 	)
