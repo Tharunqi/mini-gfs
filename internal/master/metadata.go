@@ -618,8 +618,12 @@ func (m *MetadataStore) Load() error {
 
 	m.files = data.Files
 	m.chunkid = data.ChunkID
-	m.chunkServers = data.ChunkServers
+	m.allChunkServers = data.ChunkServers
 	m.chunkLocations = data.ChunkLocations
+
+	m.chunkServers = make(
+		map[string]*ChunkServerInfo,
+	)
 
 	return nil
 }
@@ -843,4 +847,76 @@ func (m *MetadataStore) SetChunkReplica(
 	)
 
 	return nil
+}
+
+func (m *MetadataStore) RemoveChunkReplica(
+	chunkID uint64,
+	serverID string,
+) error {
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	chunk, exists := m.chunkLocations[chunkID]
+
+	if !exists {
+		return errors.New("chunk not found")
+	}
+
+	for i, replica := range chunk.Replicas {
+
+		if replica.ID == serverID {
+
+			chunk.Replicas = append(
+				chunk.Replicas[:i],
+				chunk.Replicas[i+1:]...,
+			)
+
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (m *MetadataStore) GetAllChunkMetadata() []*ChunkMetadata {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	chunks := make(
+		[]*ChunkMetadata,
+		0,
+		len(m.chunkLocations),
+	)
+
+	for _, chunk := range m.chunkLocations {
+		chunks = append(
+			chunks,
+			chunk,
+		)
+	}
+
+	return chunks
+}
+
+func (m *MetadataStore) GetAvailableChunkServers() []*ChunkServerInfo {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	servers := make(
+		[]*ChunkServerInfo,
+		0,
+		len(m.chunkServers),
+	)
+
+	for _, server := range m.chunkServers {
+		servers = append(
+			servers,
+			server,
+		)
+	}
+
+	return servers
 }

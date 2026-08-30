@@ -13,12 +13,18 @@ type MasterServer struct {
 	pb.UnimplementedMasterServiceServer
 
 	metadata *MetadataStore
+
+	replicationManager *ReplicationManager
 }
 
 func NewMasterServer(metadata *MetadataStore) *MasterServer {
-	return &MasterServer{
+	server := &MasterServer{
 		metadata: metadata,
 	}
+
+	server.replicationManager = NewReplicationManager(metadata)
+
+	return server
 }
 
 func (m *MasterServer) CreateFile(
@@ -1063,6 +1069,22 @@ func (m *MasterServer) StartFailureDetector(
 		case <-ticker.C:
 
 			m.metadata.CheckChunkServers()
+		}
+	}
+}
+
+func (m *MasterServer) StartReplicationManager(
+	ctx context.Context,
+) {
+	ticker := time.NewTicker(5 * time.Second)
+
+	for {
+		select {
+		case <-ticker.C:
+			m.replicationManager.RunOnce(ctx)
+
+		case <-ctx.Done():
+			return
 		}
 	}
 }

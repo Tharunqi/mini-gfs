@@ -12,13 +12,15 @@
   },
   "chunk_id": 10,
   "chunk_servers": {
-    "chunkserver-2": {
-      "ID": "chunkserver-2",
+    "chunkserver-1": {
+      "ID": "chunkserver-1",
       "Host": "localhost",
-      "Port": 50053,
-      "LastHeartbeat": 1787991363,
+      "Port": 50052,
+      "LastHeartbeat": 1788100808,
       "Chunks": [
-        9
+        9,
+        10,
+        8
       ],
       "AvailableSpace": 0
     },
@@ -26,7 +28,30 @@
       "ID": "chunkserver-3",
       "Host": "localhost",
       "Port": 50054,
-      "LastHeartbeat": 1787991366,
+      "LastHeartbeat": 1788100810,
+      "Chunks": [
+        10,
+        8,
+        9
+      ],
+      "AvailableSpace": 0
+    },
+    "chunkserver-4": {
+      "ID": "chunkserver-4",
+      "Host": "localhost",
+      "Port": 50055,
+      "LastHeartbeat": 1788100810,
+      "Chunks": [
+        8,
+        9
+      ],
+      "AvailableSpace": 0
+    },
+    "chunkserver-5": {
+      "ID": "chunkserver-5",
+      "Host": "localhost",
+      "Port": 50056,
+      "LastHeartbeat": 1788100807,
       "Chunks": [
         10
       ],
@@ -46,7 +71,42 @@
         "Chunks": null,
         "AvailableSpace": 0
       },
-      "Replicas": []
+      "Replicas": [
+        {
+          "ID": "chunkserver-1",
+          "Host": "localhost",
+          "Port": 50052,
+          "LastHeartbeat": 1788100808,
+          "Chunks": [
+            9,
+            10,
+            8
+          ],
+          "AvailableSpace": 0
+        },
+        {
+          "ID": "chunkserver-2",
+          "Host": "localhost",
+          "Port": 50053,
+          "LastHeartbeat": 1788100559,
+          "Chunks": [
+            9,
+            8,
+            10
+          ],
+          "AvailableSpace": 0
+        },
+        {
+          "ID": "chunkserver-5",
+          "Host": "localhost",
+          "Port": 50056,
+          "LastHeartbeat": 1788100807,
+          "Chunks": [
+            10
+          ],
+          "AvailableSpace": 0
+        }
+      ]
     },
     "8": {
       "Handle": {
@@ -60,7 +120,43 @@
         "Chunks": null,
         "AvailableSpace": 0
       },
-      "Replicas": []
+      "Replicas": [
+        {
+          "ID": "chunkserver-2",
+          "Host": "localhost",
+          "Port": 50053,
+          "LastHeartbeat": 1788100559,
+          "Chunks": [
+            9,
+            8,
+            10
+          ],
+          "AvailableSpace": 0
+        },
+        {
+          "ID": "chunkserver-3",
+          "Host": "localhost",
+          "Port": 50054,
+          "LastHeartbeat": 1788100810,
+          "Chunks": [
+            10,
+            8,
+            9
+          ],
+          "AvailableSpace": 0
+        },
+        {
+          "ID": "chunkserver-4",
+          "Host": "localhost",
+          "Port": 50055,
+          "LastHeartbeat": 1788100810,
+          "Chunks": [
+            8,
+            9
+          ],
+          "AvailableSpace": 0
+        }
+      ]
     },
     "9": {
       "Handle": {
@@ -74,7 +170,43 @@
         "Chunks": null,
         "AvailableSpace": 0
       },
-      "Replicas": []
+      "Replicas": [
+        {
+          "ID": "chunkserver-1",
+          "Host": "localhost",
+          "Port": 50052,
+          "LastHeartbeat": 1788100808,
+          "Chunks": [
+            9,
+            10,
+            8
+          ],
+          "AvailableSpace": 0
+        },
+        {
+          "ID": "chunkserver-3",
+          "Host": "localhost",
+          "Port": 50054,
+          "LastHeartbeat": 1788100810,
+          "Chunks": [
+            10,
+            8,
+            9
+          ],
+          "AvailableSpace": 0
+        },
+        {
+          "ID": "chunkserver-4",
+          "Host": "localhost",
+          "Port": 50055,
+          "LastHeartbeat": 1788100810,
+          "Chunks": [
+            8,
+            9
+          ],
+          "AvailableSpace": 0
+        }
+      ]
     }
   }
 }

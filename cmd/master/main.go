@@ -50,6 +50,8 @@ func main() {
 
 	go masterServer.StartFailureDetector(ctx)
 
+	go masterServer.StartReplicationManager(ctx)
+
 	grpcServer := grpc.NewServer()
 
 	pb.RegisterMasterServiceServer(
