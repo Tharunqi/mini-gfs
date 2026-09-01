@@ -15,6 +15,8 @@ type MasterServer struct {
 	metadata *MetadataStore
 
 	replicationManager *ReplicationManager
+
+	leaseManager *LeaseManager
 }
 
 func NewMasterServer(metadata *MetadataStore) *MasterServer {
@@ -23,6 +25,8 @@ func NewMasterServer(metadata *MetadataStore) *MasterServer {
 	}
 
 	server.replicationManager = NewReplicationManager(metadata)
+
+	server.leaseManager = NewLeaseManager(metadata)
 
 	return server
 }
@@ -1068,23 +1072,11 @@ func (m *MasterServer) StartFailureDetector(
 
 		case <-ticker.C:
 
-			m.metadata.CheckChunkServers()
-		}
-	}
-}
+			dead_servers := m.metadata.CheckChunkServers()
 
-func (m *MasterServer) StartReplicationManager(
-	ctx context.Context,
-) {
-	ticker := time.NewTicker(5 * time.Second)
+			m.replicationManager.RunOnce(ctx, dead_servers)
 
-	for {
-		select {
-		case <-ticker.C:
-			m.replicationManager.RunOnce(ctx)
-
-		case <-ctx.Done():
-			return
+			m.leaseManager.CheckPrimaries(dead_servers)
 		}
 	}
 }

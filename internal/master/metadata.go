@@ -781,7 +781,7 @@ func (m *MetadataStore) UpdateHeartbeat(
 	}
 }
 
-func (m *MetadataStore) CheckChunkServers() {
+func (m *MetadataStore) CheckChunkServers() map[string]*ChunkServerInfo {
 
 	const heartbeatInterval = 5 * time.Second
 	const missedHeartbeats = 3
@@ -791,6 +791,8 @@ func (m *MetadataStore) CheckChunkServers() {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	dead_servers := make(map[string]*ChunkServerInfo)
 
 	for id, server := range m.chunkServers {
 
@@ -807,12 +809,15 @@ func (m *MetadataStore) CheckChunkServers() {
 				id,
 			)
 
+			dead_servers[id] = server
+
 			delete(
 				m.chunkServers,
 				id,
 			)
 		}
 	}
+	return dead_servers
 }
 func (m *MetadataStore) IsChunkServerAvailable(
 	id string,

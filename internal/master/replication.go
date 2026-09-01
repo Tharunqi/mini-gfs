@@ -311,11 +311,20 @@ func (r *ReplicationManager) RepairChunk(
 }
 
 func (r *ReplicationManager) CheckReplication(
-	ctx context.Context,
+	ctx context.Context, dead_servers map[string]*ChunkServerInfo,
 ) {
 
-	chunks :=
-		r.metadata.GetAllChunkMetadata()
+	chunks := make(map[uint64]*ChunkMetadata)
+	for _, server := range dead_servers {
+		dead_chunks := server.Chunks
+		for _, chunkID := range dead_chunks {
+			chunk, exists := r.metadata.GetChunkMetadata(chunkID)
+
+			if exists == nil {
+				chunks[chunk.Handle.Id] = chunk
+			}
+		}
+	}
 
 	for _, chunk := range chunks {
 
@@ -331,8 +340,8 @@ func (r *ReplicationManager) CheckReplication(
 }
 
 func (r *ReplicationManager) RunOnce(
-	ctx context.Context,
+	ctx context.Context, dead_servers map[string]*ChunkServerInfo,
 ) {
 	// repair chunks affected by those failures.
-	r.CheckReplication(ctx)
+	r.CheckReplication(ctx, dead_servers)
 }

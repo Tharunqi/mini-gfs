@@ -1091,39 +1091,17 @@ func (c *Client) Insert(
 			)
 		}
 
-		conn, chunkClient, err :=
-			connectChunkServer(locationResp.Location)
+		err = c.deleteChunkFromAllReplicas(
+			ctx,
+			locationResp.Location,
+		)
 
 		if err != nil {
 			return err
-		}
-
-		deleteResp, err :=
-			chunkClient.DeleteChunk(
-				ctx,
-				&pb.DeleteChunkRequest{
-					ChunkHandle: handle,
-				},
-			)
-
-		conn.Close()
-
-		if err != nil {
-			return err
-		}
-
-		if deleteResp.Status == nil ||
-			!deleteResp.Status.Success {
-
-			return fmt.Errorf(
-				"failed deleting chunk %d: %s",
-				handle.Id,
-				deleteResp.Status.Message,
-			)
 		}
 
 		fmt.Printf(
-			"[Client Insert] deleted chunk %d\n",
+			"[Client Insert] deleted chunk %d from all available replicas\n",
 			handle.Id,
 		)
 	}
@@ -1249,4 +1227,113 @@ func (c *Client) Insert(
 	fmt.Println("[Client Insert] insert completed successfully")
 
 	return nil
+}
+
+func (c *Client) deleteChunkFromAllReplicas(
+	ctx context.Context,
+	location *pb.ChunkLocation,
+) error {
+
+	servers := make(
+		[]*pb.ServerInfo,
+		0,
+		1+len(location.Replicas),
+	)
+
+	if location.Primary != nil {
+		servers = append(
+			servers,
+			location.Primary,
+		)
+	}
+
+	servers = append(
+		servers,
+		location.Replicas...,
+	)
+
+	for _, server := range servers {
+
+		if server == nil {
+			continue
+		}
+
+		conn, chunkClient, err :=
+			connectToServer(server)
+
+		if err != nil {
+			fmt.Printf(
+				"[Client] skipping unavailable server %s while deleting chunk %d\n",
+				server.Id,
+				location.Handle.Id,
+			)
+			continue
+		}
+
+		deleteResp, err :=
+			chunkClient.DeleteChunk(
+				ctx,
+				&pb.DeleteChunkRequest{
+					ChunkHandle: location.Handle,
+				},
+			)
+
+		conn.Close()
+
+		if err != nil {
+			fmt.Printf(
+				"[Client] failed deleting chunk %d from %s: %v\n",
+				location.Handle.Id,
+				server.Id,
+				err,
+			)
+			continue
+		}
+
+		if deleteResp.Status == nil ||
+			!deleteResp.Status.Success {
+
+			fmt.Printf(
+				"[Client] failed deleting chunk %d from %s: %s\n",
+				location.Handle.Id,
+				server.Id,
+				deleteResp.Status.Message,
+			)
+			continue
+		}
+
+		fmt.Printf(
+			"[Client] deleted chunk %d from %s\n",
+			location.Handle.Id,
+			server.Id,
+		)
+	}
+
+	return nil
+}
+
+func connectToServer(
+	server *pb.ServerInfo,
+) (*grpc.ClientConn, pb.ChunkServiceClient, error) {
+
+	address := fmt.Sprintf(
+		"%s:%d",
+		server.Host,
+		server.Port,
+	)
+
+	conn, err := grpc.NewClient(
+		address,
+		grpc.WithTransportCredentials(
+			insecure.NewCredentials(),
+		),
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	client := pb.NewChunkServiceClient(conn)
+
+	return conn, client, nil
 }
