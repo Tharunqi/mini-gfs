@@ -49,6 +49,7 @@ message DeleteChunkResponse {
 message TruncateChunkRequest{
     ChunkHandle chunk_handle = 1;
     uint64 size = 2;
+    bool replica_only = 3;
 }
 
 message TruncateChunkResponse{

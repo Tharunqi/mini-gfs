@@ -103,23 +103,89 @@ func (c *Client) Delete(
 	path string,
 ) error {
 
-	resp, err := c.masterClient.DeleteFile(
+	// First get the file metadata so that we know which chunks
+	// physically belong to this file.
+	openResp, err := c.masterClient.OpenFile(
+		ctx,
+		&pb.OpenFileRequest{
+			Path: path,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+
+	if openResp.Status == nil || !openResp.Status.Success {
+		message := "failed to open file"
+		if openResp.Status != nil {
+			message = openResp.Status.Message
+		}
+
+		return errors.New(message)
+	}
+
+	// Delete every chunk from all of its physical copies.
+	for _, handle := range openResp.Chunks {
+
+		locationResp, err := c.masterClient.GetChunkLocations(
+			ctx,
+			&pb.GetChunkLocationsRequest{
+				ChunkHandle: handle,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to get location for chunk %d: %w",
+				handle.Id,
+				err,
+			)
+		}
+
+		if locationResp.Status == nil || !locationResp.Status.Success {
+			message := "failed to get chunk location"
+			if locationResp.Status != nil {
+				message = locationResp.Status.Message
+			}
+
+			return fmt.Errorf(
+				"failed to get location for chunk %d: %s",
+				handle.Id,
+				message,
+			)
+		}
+
+		err = c.deleteChunkFromAllReplicas(
+			ctx,
+			locationResp.Location,
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to delete chunk %d: %w",
+				handle.Id,
+				err,
+			)
+		}
+	}
+
+	// All physical chunks have now been deleted.
+	// Finally remove the file metadata from Master.
+	deleteResp, err := c.masterClient.DeleteFile(
 		ctx,
 		&pb.DeleteFileRequest{
 			Path: path,
 		},
 	)
-
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete file metadata: %w", err)
 	}
 
-	if resp.Status == nil || !resp.Status.Success {
-		if resp.Status != nil {
-			return errors.New(resp.Status.Message)
+	if deleteResp.Status == nil || !deleteResp.Status.Success {
+		message := "failed to delete file metadata"
+		if deleteResp.Status != nil {
+			message = deleteResp.Status.Message
 		}
 
-		return errors.New("delete failed")
+		return errors.New(message)
 	}
 
 	return nil
@@ -580,38 +646,20 @@ func (c *Client) DeleteRange(
 
 	for _, location := range affected {
 
-		conn, chunkClient, err :=
-			connectChunkServer(location)
+		err := c.deleteChunkFromAllReplicas(
+			ctx,
+			location,
+		)
 
 		if err != nil {
 			return err
 		}
 
-		deleteResp, err :=
-			chunkClient.DeleteChunk(
-				ctx,
-				&pb.DeleteChunkRequest{
-					ChunkHandle: location.Handle,
-				},
-			)
-
-		conn.Close()
-
-		if err != nil {
-			return err
-		}
-
-		if deleteResp.Status == nil ||
-			!deleteResp.Status.Success {
-
-			return fmt.Errorf(
-				"failed deleting chunk %d: %s",
-				location.Handle.Id,
-				deleteResp.Status.Message,
-			)
-		}
+		fmt.Printf(
+			"[Client DeleteRange] deleted chunk %d from all available replicas\n",
+			location.Handle.Id,
+		)
 	}
-
 	// --------------------------------------------------------
 	// Number of chunks required for rebuilt buffer.
 	// --------------------------------------------------------
@@ -748,69 +796,37 @@ func (c *Client) Truncate(
 	// Delete chunks after the final surviving chunk.
 	for _, location := range resp.DeleteChunks {
 
-		conn, chunkClient, err :=
-			connectChunkServer(location)
+		err := c.deleteChunkFromAllReplicas(
+			ctx,
+			location,
+		)
 
 		if err != nil {
 			return err
 		}
 
-		deleteResp, err :=
-			chunkClient.DeleteChunk(
-				ctx,
-				&pb.DeleteChunkRequest{
-					ChunkHandle: location.Handle,
-				},
-			)
-
-		conn.Close()
-
-		if err != nil {
-			return err
-		}
-
-		if deleteResp.Status == nil ||
-			!deleteResp.Status.Success {
-
-			return fmt.Errorf(
-				"failed deleting chunk %d",
-				location.Handle.Id,
-			)
-		}
+		fmt.Printf(
+			"[Client Truncate] deleted chunk %d from all available replicas\n",
+			location.Handle.Id,
+		)
 	}
 
 	// Truncate final surviving chunk.
+	fmt.Printf(
+		"[Client Truncate] requested file size=%d, chunk=%d, chunk truncate size=%d\n",
+		size,
+		resp.TruncateChunk.Handle.Id,
+		resp.TruncateChunkSize,
+	)
 	if resp.TruncateChunk != nil {
 
-		conn, chunkClient, err :=
-			connectChunkServer(resp.TruncateChunk)
-
+		err := c.truncateChunkFromAllReplicas(
+			ctx,
+			resp.TruncateChunk,
+			resp.TruncateChunkSize,
+		)
 		if err != nil {
 			return err
-		}
-
-		truncateResp, err :=
-			chunkClient.TruncateChunk(
-				ctx,
-				&pb.TruncateChunkRequest{
-					ChunkHandle: resp.TruncateChunk.Handle,
-					Size:        resp.TruncateChunkSize,
-				},
-			)
-
-		conn.Close()
-
-		if err != nil {
-			return err
-		}
-
-		if truncateResp.Status == nil ||
-			!truncateResp.Status.Success {
-
-			return fmt.Errorf(
-				"failed truncating chunk %d",
-				resp.TruncateChunk.Handle.Id,
-			)
 		}
 	}
 
@@ -1234,40 +1250,93 @@ func (c *Client) deleteChunkFromAllReplicas(
 	location *pb.ChunkLocation,
 ) error {
 
-	servers := make(
-		[]*pb.ServerInfo,
-		0,
-		1+len(location.Replicas),
-	)
-
-	if location.Primary != nil {
-		servers = append(
-			servers,
-			location.Primary,
-		)
+	if location == nil || location.Handle == nil {
+		return errors.New("invalid chunk location")
 	}
 
-	servers = append(
-		servers,
-		location.Replicas...,
-	)
+	// --------------------------------------------------------
+	// 1. Delete all replicas first.
+	//
+	// DeleteReplicaChunk only removes the physical chunk.
+	// It does NOT modify Master metadata.
+	// --------------------------------------------------------
 
-	for _, server := range servers {
+	for _, replica := range location.Replicas {
 
-		if server == nil {
+		if replica == nil {
 			continue
 		}
 
-		conn, chunkClient, err :=
-			connectToServer(server)
+		conn, chunkClient, err := connectToServer(replica)
 
 		if err != nil {
 			fmt.Printf(
-				"[Client] skipping unavailable server %s while deleting chunk %d\n",
-				server.Id,
+				"[Client] skipping unavailable replica %s while deleting chunk %d\n",
+				replica.Id,
 				location.Handle.Id,
 			)
 			continue
+		}
+
+		deleteResp, err :=
+			chunkClient.DeleteReplicaChunk(
+				ctx,
+				&pb.DeleteReplicaChunkRequest{
+					ChunkHandle: location.Handle,
+				},
+			)
+
+		conn.Close()
+
+		if err != nil {
+			fmt.Printf(
+				"[Client] failed deleting replica chunk %d from %s: %v\n",
+				location.Handle.Id,
+				replica.Id,
+				err,
+			)
+			continue
+		}
+
+		if deleteResp.Status == nil ||
+			!deleteResp.Status.Success {
+
+			fmt.Printf(
+				"[Client] failed deleting replica chunk %d from %s: %s\n",
+				location.Handle.Id,
+				replica.Id,
+				deleteResp.Status.Message,
+			)
+			continue
+		}
+
+		fmt.Printf(
+			"[Client] deleted replica chunk %d from %s\n",
+			location.Handle.Id,
+			replica.Id,
+		)
+	}
+
+	// --------------------------------------------------------
+	// 2. Delete the primary last.
+	//
+	// DeleteChunk performs:
+	//   - physical deletion
+	//   - Master metadata deletion
+	// --------------------------------------------------------
+
+	if location.Primary != nil {
+
+		conn, chunkClient, err :=
+			connectToServer(location.Primary)
+
+		if err != nil {
+			return fmt.Errorf(
+				"failed connecting to primary %s while deleting chunk %d: %w",
+				location.Primary.Id,
+				location.Handle.Id,
+				err,
+			)
 		}
 
 		deleteResp, err :=
@@ -1281,31 +1350,33 @@ func (c *Client) deleteChunkFromAllReplicas(
 		conn.Close()
 
 		if err != nil {
-			fmt.Printf(
-				"[Client] failed deleting chunk %d from %s: %v\n",
+			return fmt.Errorf(
+				"failed deleting primary chunk %d: %w",
 				location.Handle.Id,
-				server.Id,
 				err,
 			)
-			continue
 		}
 
 		if deleteResp.Status == nil ||
 			!deleteResp.Status.Success {
 
-			fmt.Printf(
-				"[Client] failed deleting chunk %d from %s: %s\n",
+			message := "primary deletion failed"
+
+			if deleteResp.Status != nil {
+				message = deleteResp.Status.Message
+			}
+
+			return fmt.Errorf(
+				"failed deleting primary chunk %d: %s",
 				location.Handle.Id,
-				server.Id,
-				deleteResp.Status.Message,
+				message,
 			)
-			continue
 		}
 
 		fmt.Printf(
-			"[Client] deleted chunk %d from %s\n",
+			"[Client] deleted primary chunk %d from %s\n",
 			location.Handle.Id,
-			server.Id,
+			location.Primary.Id,
 		)
 	}
 
@@ -1336,4 +1407,135 @@ func connectToServer(
 	client := pb.NewChunkServiceClient(conn)
 
 	return conn, client, nil
+}
+
+func (c *Client) truncateChunkFromAllReplicas(
+	ctx context.Context,
+	location *pb.ChunkLocation,
+	size uint64,
+) error {
+
+	if location == nil || location.Handle == nil {
+		return errors.New("invalid chunk location")
+	}
+
+	// Truncate replicas first.
+	for _, replica := range location.Replicas {
+
+		if replica == nil {
+			continue
+		}
+
+		conn, chunkClient, err := connectToServer(replica)
+
+		if err != nil {
+			fmt.Printf(
+				"[Client] skipping unavailable replica %s while truncating chunk %d\n",
+				replica.Id,
+				location.Handle.Id,
+			)
+			continue
+		}
+
+		resp, err := chunkClient.TruncateChunk(
+			ctx,
+			&pb.TruncateChunkRequest{
+				ChunkHandle: location.Handle,
+				Size:        size,
+				ReplicaOnly: true,
+			},
+		)
+
+		conn.Close()
+
+		if err != nil {
+			fmt.Printf(
+				"[Client] failed truncating chunk %d on replica %s: %v\n",
+				location.Handle.Id,
+				replica.Id,
+				err,
+			)
+			continue
+		}
+
+		if resp.Status == nil || !resp.Status.Success {
+			message := "replica truncation failed"
+
+			if resp.Status != nil {
+				message = resp.Status.Message
+			}
+
+			fmt.Printf(
+				"[Client] failed truncating chunk %d on replica %s: %s\n",
+				location.Handle.Id,
+				replica.Id,
+				message,
+			)
+
+			continue
+		}
+
+		fmt.Printf(
+			"[Client] truncated chunk %d on replica %s\n",
+			location.Handle.Id,
+			replica.Id,
+		)
+	}
+
+	// Finally truncate the primary.
+	if location.Primary == nil {
+		return errors.New("chunk has no primary")
+	}
+
+	conn, chunkClient, err := connectToServer(location.Primary)
+
+	if err != nil {
+		return fmt.Errorf(
+			"failed connecting to primary %s while truncating chunk %d: %w",
+			location.Primary.Id,
+			location.Handle.Id,
+			err,
+		)
+	}
+
+	resp, err := chunkClient.TruncateChunk(
+		ctx,
+		&pb.TruncateChunkRequest{
+			ChunkHandle: location.Handle,
+			Size:        size,
+			ReplicaOnly: false,
+		},
+	)
+
+	conn.Close()
+
+	if err != nil {
+		return fmt.Errorf(
+			"failed truncating primary chunk %d: %w",
+			location.Handle.Id,
+			err,
+		)
+	}
+
+	if resp.Status == nil || !resp.Status.Success {
+		message := "primary truncation failed"
+
+		if resp.Status != nil {
+			message = resp.Status.Message
+		}
+
+		return fmt.Errorf(
+			"failed truncating primary chunk %d: %s",
+			location.Handle.Id,
+			message,
+		)
+	}
+
+	fmt.Printf(
+		"[Client] truncated primary chunk %d on %s\n",
+		location.Handle.Id,
+		location.Primary.Id,
+	)
+
+	return nil
 }

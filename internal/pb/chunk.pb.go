@@ -7,11 +7,12 @@
 package pb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -341,6 +342,7 @@ type TruncateChunkRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChunkHandle   *ChunkHandle           `protobuf:"bytes,1,opt,name=chunk_handle,json=chunkHandle,proto3" json:"chunk_handle,omitempty"`
 	Size          uint64                 `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
+	ReplicaOnly   bool                   `protobuf:"varint,3,opt,name=replica_only,json=replicaOnly,proto3" json:"replica_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -387,6 +389,13 @@ func (x *TruncateChunkRequest) GetSize() uint64 {
 		return x.Size
 	}
 	return 0
+}
+
+func (x *TruncateChunkRequest) GetReplicaOnly() bool {
+	if x != nil {
+		return x.ReplicaOnly
+	}
+	return false
 }
 
 type TruncateChunkResponse struct {
@@ -743,10 +752,11 @@ const file_chunk_proto_rawDesc = "" +
 	"\x12DeleteChunkRequest\x123\n" +
 	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\":\n" +
 	"\x13DeleteChunkResponse\x12#\n" +
-	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"_\n" +
+	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"\x82\x01\n" +
 	"\x14TruncateChunkRequest\x123\n" +
 	"\fchunk_handle\x18\x01 \x01(\v2\x10.gfs.ChunkHandleR\vchunkHandle\x12\x12\n" +
-	"\x04size\x18\x02 \x01(\x04R\x04size\"<\n" +
+	"\x04size\x18\x02 \x01(\x04R\x04size\x12!\n" +
+	"\freplica_only\x18\x03 \x01(\bR\vreplicaOnly\"<\n" +
 	"\x15TruncateChunkResponse\x12#\n" +
 	"\x06status\x18\x01 \x01(\v2\v.gfs.StatusR\x06status\"\x7f\n" +
 	"\x15ReplicateChunkRequest\x123\n" +

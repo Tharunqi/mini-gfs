@@ -352,21 +352,13 @@ func (c *ChunkServer) TruncateChunk(
 		path: req.ChunkHandle.Path,
 	}
 
-	//Error handling have to do
-	deleted_size := c.storage.GetChunkSize(handle) - req.Size
+	oldSize := c.storage.GetChunkSize(handle)
 
-	err := c.storage.TruncateChunk(handle, req.Size)
-
+	err := c.storage.TruncateChunk(
+		handle,
+		req.Size,
+	)
 	if err != nil {
-		if errors.Is(err, ErrChunkNotFound) {
-			return &pb.TruncateChunkResponse{
-				Status: &pb.Status{
-					Success: false,
-					Message: "chunk not found",
-				},
-			}, nil
-		}
-
 		return &pb.TruncateChunkResponse{
 			Status: &pb.Status{
 				Success: false,
@@ -375,11 +367,22 @@ func (c *ChunkServer) TruncateChunk(
 		}, nil
 	}
 
+	if req.ReplicaOnly {
+		return &pb.TruncateChunkResponse{
+			Status: &pb.Status{
+				Success: true,
+				Message: "replica chunk truncated successfully",
+			},
+		}, nil
+	}
+
+	removedSize := oldSize - req.Size
+
 	_, err = c.masterClient.UpdateMasterMetadata(
 		ctx,
 		&pb.UpdateMasterMetadataRequest{
 			Path:   req.ChunkHandle.Path,
-			Size:   deleted_size,
+			Size:   removedSize,
 			Chunk:  req.ChunkHandle,
 			Delete: 1,
 		},
@@ -401,7 +404,6 @@ func (c *ChunkServer) TruncateChunk(
 		},
 	}, nil
 }
-
 func (c *ChunkServer) RegisterWithMaster(
 	ctx context.Context,
 ) error {
