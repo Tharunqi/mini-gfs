@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/Tharunqi/mini-gfs/internal/config"
 	pb "github.com/Tharunqi/mini-gfs/internal/pb"
@@ -238,82 +239,150 @@ func (c *Client) Read(
 		return nil, err
 	}
 
-	result := make([]byte, 0, info.Size)
+	// One result slot per logical chunk.
+	results := make([][]byte, len(info.Chunks))
 
-	var bytesRead uint64
+	var wg sync.WaitGroup
+
+	// Used to safely report the first error.
+	var mu sync.Mutex
+	var firstErr error
 
 	for i, handle := range info.Chunks {
 
-		remaining := info.Size - bytesRead
+		// Do not capture loop variables directly.
+		index := i
+		chunkHandle := handle
 
-		if remaining == 0 {
-			break
+		// Calculate this chunk's read length BEFORE
+		// starting the goroutine.
+		chunkStart := uint64(index) * uint64(config.ChunkSize)
+
+		if chunkStart >= info.Size {
+			continue
 		}
 
 		readLength := uint64(config.ChunkSize)
+
+		remaining := info.Size - chunkStart
 
 		if remaining < readLength {
 			readLength = remaining
 		}
 
-		locationResp, err :=
-			c.masterClient.GetChunkLocations(
-				ctx,
-				&pb.GetChunkLocationsRequest{
-					ChunkHandle: handle,
-				},
-			)
+		wg.Add(1)
 
-		if err != nil {
-			return nil, err
-		}
+		go func() {
+			defer wg.Done()
 
-		if locationResp.Status == nil ||
-			!locationResp.Status.Success {
+			// ------------------------------------------------
+			// Get chunk location.
+			// ------------------------------------------------
 
-			return nil, fmt.Errorf(
-				"failed to get location for chunk %d",
-				handle.Id,
-			)
-		}
+			locationResp, err :=
+				c.masterClient.GetChunkLocations(
+					ctx,
+					&pb.GetChunkLocationsRequest{
+						ChunkHandle: chunkHandle,
+					},
+				)
 
-		conn, chunkClient, err :=
-			connectChunkServer(locationResp.Location)
+			if err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
+				return
+			}
 
-		if err != nil {
-			return nil, err
-		}
+			if locationResp.Status == nil ||
+				!locationResp.Status.Success {
 
-		readResp, err :=
-			chunkClient.ReadChunk(
-				ctx,
-				&pb.ReadChunkRequest{
-					ChunkHandle: handle,
-					Offset:      0,
-					Length:      readLength,
-				},
-			)
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf(
+						"failed to get location for chunk %d",
+						chunkHandle.Id,
+					)
+				}
+				mu.Unlock()
+				return
+			}
 
-		conn.Close()
+			// ------------------------------------------------
+			// Read chunk.
+			// ------------------------------------------------
 
-		if err != nil {
-			return nil, err
-		}
+			conn, chunkClient, err :=
+				connectChunkServer(locationResp.Location)
 
-		if readResp.Status == nil ||
-			!readResp.Status.Success {
+			if err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
+				return
+			}
 
-			return nil, fmt.Errorf(
-				"failed reading chunk %d: %s",
-				handle.Id,
-				readResp.Status.Message,
-			)
-		}
+			defer conn.Close()
 
-		result = append(result, readResp.Data...)
-		bytesRead += uint64(len(readResp.Data))
+			readResp, err :=
+				chunkClient.ReadChunk(
+					ctx,
+					&pb.ReadChunkRequest{
+						ChunkHandle: chunkHandle,
+						Offset:      0,
+						Length:      readLength,
+					},
+				)
 
-		_ = i
+			if err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
+				return
+			}
+
+			if readResp.Status == nil ||
+				!readResp.Status.Success {
+
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf(
+						"failed reading chunk %d: %s",
+						chunkHandle.Id,
+						readResp.Status.Message,
+					)
+				}
+				mu.Unlock()
+				return
+			}
+
+			// Each goroutine writes ONLY to its own
+			// results[index].
+			results[index] = readResp.Data
+		}()
+	}
+
+	wg.Wait()
+
+	// If any goroutine failed, return the error.
+	if firstErr != nil {
+		return nil, firstErr
+	}
+
+	// --------------------------------------------------------
+	// Reassemble chunks in logical order.
+	// --------------------------------------------------------
+
+	result := make([]byte, 0, info.Size)
+
+	for _, chunkData := range results {
+		result = append(result, chunkData...)
 	}
 
 	if uint64(len(result)) != info.Size {
@@ -364,6 +433,11 @@ func (c *Client) Write(
 
 	chunkSize := uint64(config.ChunkSize)
 
+	var wg sync.WaitGroup
+
+	var mu sync.Mutex
+	var firstErr error
+
 	dataOffset := uint64(0)
 
 	for _, location := range locations {
@@ -372,54 +446,116 @@ func (c *Client) Write(
 			break
 		}
 
-		chunkIndex := (offset + dataOffset) / chunkSize
-		chunkOffset := (offset + dataOffset) % chunkSize
+		// ----------------------------------------------------
+		// Calculate everything BEFORE starting goroutine.
+		// ----------------------------------------------------
+
+		currentOffset := dataOffset
+
+		chunkIndex :=
+			(offset + currentOffset) / chunkSize
+
+		chunkOffset :=
+			(offset + currentOffset) % chunkSize
 
 		_ = chunkIndex
 
-		remaining := uint64(len(data)) - dataOffset
+		remaining :=
+			uint64(len(data)) - currentOffset
 
-		writeLength := chunkSize - chunkOffset
+		writeLength :=
+			chunkSize - chunkOffset
 
 		if remaining < writeLength {
 			writeLength = remaining
 		}
 
-		conn, chunkClient, err :=
-			connectChunkServer(location)
+		// Make a local copy of everything used by goroutine.
+		chunkLocation := location
+		chunkDataStart := currentOffset
+		chunkDataEnd := currentOffset + writeLength
+		chunkWriteOffset := chunkOffset
 
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
 
-		writeResp, err :=
-			chunkClient.WriteChunk(
-				ctx,
-				&pb.WriteChunkRequest{
-					ChunkHandle: location.Handle,
-					Offset:      chunkOffset,
-					Data:        data[dataOffset : dataOffset+writeLength],
-					Replicas:    location.Replicas,
-				},
-			)
+		go func() {
+			defer wg.Done()
 
-		conn.Close()
+			conn, chunkClient, err :=
+				connectChunkServer(chunkLocation)
 
-		if err != nil {
-			return err
-		}
+			if err != nil {
+				mu.Lock()
 
-		if writeResp.Status == nil ||
-			!writeResp.Status.Success {
+				if firstErr == nil {
+					firstErr = err
+				}
 
-			return fmt.Errorf(
-				"write to chunk %d failed: %s",
-				location.Handle.Id,
-				writeResp.Status.Message,
-			)
-		}
+				mu.Unlock()
 
+				return
+			}
+
+			writeResp, err :=
+				chunkClient.WriteChunk(
+					ctx,
+					&pb.WriteChunkRequest{
+						ChunkHandle: chunkLocation.Handle,
+						Offset:      chunkWriteOffset,
+						Data:        data[chunkDataStart:chunkDataEnd],
+						Replicas:    chunkLocation.Replicas,
+					},
+				)
+
+			conn.Close()
+
+			if err != nil {
+				mu.Lock()
+
+				if firstErr == nil {
+					firstErr = err
+				}
+
+				mu.Unlock()
+
+				return
+			}
+
+			if writeResp.Status == nil ||
+				!writeResp.Status.Success {
+
+				errMessage := "write failed"
+
+				if writeResp.Status != nil {
+					errMessage =
+						writeResp.Status.Message
+				}
+
+				mu.Lock()
+
+				if firstErr == nil {
+					firstErr = fmt.Errorf(
+						"write to chunk %d failed: %s",
+						chunkLocation.Handle.Id,
+						errMessage,
+					)
+				}
+
+				mu.Unlock()
+
+				return
+			}
+		}()
+
+		// Update ONLY in the parent goroutine.
 		dataOffset += writeLength
+	}
+
+	// Wait for every chunk write to finish.
+	wg.Wait()
+
+	if firstErr != nil {
+		return firstErr
 	}
 
 	return nil
@@ -457,9 +593,18 @@ func (c *Client) Append(
 	}
 
 	chunkSize := uint64(config.ChunkSize)
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+
 	dataOffset := uint64(0)
 
 	for _, location := range resp.Locations {
+
+		// ------------------------------------------------
+		// Calculate everything BEFORE starting goroutine.
+		// ------------------------------------------------
 
 		absoluteOffset :=
 			resp.Offset + dataOffset
@@ -477,40 +622,91 @@ func (c *Client) Append(
 			writeLength = remaining
 		}
 
-		conn, chunkClient, err :=
-			connectChunkServer(location)
+		// Capture local copies for this goroutine.
+		currentLocation := location
+		currentDataStart := dataOffset
+		currentDataEnd := dataOffset + writeLength
+		currentChunkOffset := chunkOffset
 
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
 
-		writeResp, err :=
-			chunkClient.WriteChunk(
-				ctx,
-				&pb.WriteChunkRequest{
-					ChunkHandle: location.Handle,
-					Offset:      chunkOffset,
-					Data:        data[dataOffset : dataOffset+writeLength],
-					Replicas:    location.Replicas,
-				},
-			)
+		go func() {
+			defer wg.Done()
 
-		conn.Close()
+			conn, chunkClient, err :=
+				connectChunkServer(currentLocation)
 
-		if err != nil {
-			return err
-		}
+			if err != nil {
+				mu.Lock()
 
-		if writeResp.Status == nil ||
-			!writeResp.Status.Success {
+				if firstErr == nil {
+					firstErr = err
+				}
 
-			return fmt.Errorf(
-				"append to chunk %d failed: %s",
-				location.Handle.Id,
-				writeResp.Status.Message,
-			)
-		}
+				mu.Unlock()
+
+				return
+			}
+
+			defer conn.Close()
+
+			writeResp, err :=
+				chunkClient.WriteChunk(
+					ctx,
+					&pb.WriteChunkRequest{
+						ChunkHandle: currentLocation.Handle,
+						Offset:      currentChunkOffset,
+						Data:        data[currentDataStart:currentDataEnd],
+						Replicas:    currentLocation.Replicas,
+					},
+				)
+
+			if err != nil {
+				mu.Lock()
+
+				if firstErr == nil {
+					firstErr = err
+				}
+
+				mu.Unlock()
+
+				return
+			}
+
+			if writeResp.Status == nil ||
+				!writeResp.Status.Success {
+
+				message := "append write failed"
+
+				if writeResp.Status != nil {
+					message = writeResp.Status.Message
+				}
+
+				mu.Lock()
+
+				if firstErr == nil {
+					firstErr = fmt.Errorf(
+						"append to chunk %d failed: %s",
+						currentLocation.Handle.Id,
+						message,
+					)
+				}
+
+				mu.Unlock()
+
+				return
+			}
+		}()
+
+		// IMPORTANT:
+		// Only the main goroutine modifies dataOffset.
 		dataOffset += writeLength
+	}
+
+	wg.Wait()
+
+	if firstErr != nil {
+		return firstErr
 	}
 
 	return nil
