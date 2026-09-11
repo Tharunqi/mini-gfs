@@ -3,95 +3,134 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"time"
 
-	clientpkg "github.com/Tharunqi/mini-gfs/internal/client"
+	"github.com/Tharunqi/mini-gfs/internal/client"
+	"github.com/Tharunqi/mini-gfs/internal/config"
 )
 
 func main() {
 	ctx := context.Background()
 
-	c, err := clientpkg.New("localhost:50051")
+	c, err := client.New("localhost:50051")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
+	defer c.Close()
 
-	path := "parallel_test.txt"
+	path := "latency_test.txt"
+
+	// 20 chunks worth of data.
+	size := 5 * config.ChunkSize
+
+	data := make([]byte, size)
+
+	for i := range data {
+		data[i] = byte('A' + (i % 26))
+	}
 
 	fmt.Println("========================================")
-	fmt.Println("PARALLEL READ/WRITE/APPEND TEST")
+	fmt.Println("PARALLEL I/O LATENCY TEST")
 	fmt.Println("========================================")
+	fmt.Println("Chunk size:", config.ChunkSize)
+	fmt.Println("File size:", len(data))
+	fmt.Println("Expected chunks:", (len(data)+int(config.ChunkSize)-1)/int(config.ChunkSize))
+	fmt.Println()
 
 	// --------------------------------------------------
-	// TEST 1: CREATE
+	// CREATE
 	// --------------------------------------------------
 
-	fmt.Println("\nTEST 1: CREATE")
+	_ = c.Delete(ctx, path)
 
-	if err := c.Create(ctx, path); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("✅ Created:", path)
-
-	// --------------------------------------------------
-	// TEST 2: WRITE
-	// --------------------------------------------------
-
-	fmt.Println("\nTEST 2: WRITE")
-
-	writeData := []byte(
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-	)
-
-	if err := c.Write(ctx, path, 0, writeData); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Written:", string(writeData))
-
-	// --------------------------------------------------
-	// TEST 3: APPEND
-	// --------------------------------------------------
-
-	fmt.Println("\nTEST 3: APPEND")
-
-	appendData := []byte("APPEND")
-
-	if err := c.Append(ctx, path, appendData); err != nil {
-		log.Fatal(err)
-	}
-
-	expected := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789APPEND"
-
-	fmt.Println("Expected:", expected)
-
-	// --------------------------------------------------
-	// TEST 4: READ
-	// --------------------------------------------------
-
-	fmt.Println("\nTEST 4: READ")
-
-	actualData, err := c.Read(ctx, path)
+	err = c.Create(ctx, path)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
-	actual := string(actualData)
+	// --------------------------------------------------
+	// WRITE
+	// --------------------------------------------------
 
-	fmt.Println("Actual:", actual)
+	fmt.Println("Writing large file...")
 
-	if actual != expected {
-		log.Fatalf(
-			"❌ DATA MISMATCH\nExpected: %q\nActual:   %q",
-			expected,
-			actual,
-		)
+	start := time.Now()
+
+	err = c.Write(ctx, path, 0, data)
+	if err != nil {
+		panic(err)
 	}
 
-	fmt.Println("✅ DATA VERIFIED")
+	writeTime := time.Since(start)
 
-	fmt.Println("\n========================================")
-	fmt.Println("✅ PARALLEL I/O TEST PASSED")
+	fmt.Println("Write time:", writeTime)
+	fmt.Println()
+
+	// --------------------------------------------------
+	// READ 1
+	// --------------------------------------------------
+
+	fmt.Println("Reading file...")
+
+	start = time.Now()
+
+	result, err := c.Read(ctx, path)
+	if err != nil {
+		panic(err)
+	}
+
+	readTime1 := time.Since(start)
+
+	fmt.Println("Read time:", readTime1)
+	fmt.Println("Bytes read:", len(result))
+
+	// --------------------------------------------------
+	// VERIFY
+	// --------------------------------------------------
+
+	if len(result) != len(data) {
+		panic(fmt.Sprintf(
+			"size mismatch: expected %d, got %d",
+			len(data),
+			len(result),
+		))
+	}
+
+	for i := range data {
+		if result[i] != data[i] {
+			panic(fmt.Sprintf(
+				"data mismatch at byte %d",
+				i,
+			))
+		}
+	}
+
+	fmt.Println("Data verified: OK")
+	fmt.Println()
+
+	// --------------------------------------------------
+	// READ AGAIN
+	// --------------------------------------------------
+
+	fmt.Println("Reading again...")
+
+	start = time.Now()
+
+	result, err = c.Read(ctx, path)
+	if err != nil {
+		panic(err)
+	}
+
+	readTime2 := time.Since(start)
+
+	fmt.Println("Second read time:", readTime2)
+
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("RESULT")
+	fmt.Println("========================================")
+	fmt.Println("Write:", writeTime)
+	fmt.Println("Read 1:", readTime1)
+	fmt.Println("Read 2:", readTime2)
 	fmt.Println("========================================")
 }
